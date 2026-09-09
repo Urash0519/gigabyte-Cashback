@@ -21,4 +21,6 @@
 
 ## 交付界線
 
-Google OAuth 與銀行 API 依決策延後。Email 目前為 outbox／模擬處理；會員、RMA、OCR 及病毒掃描外部服務未整合，現版提供人工檢核。正式五國營運矩陣、語言文案、銀行檔案格式、容量／備援與保存政策仍需核定。來源已提供 CI workflow；本地通過不等於 GitHub CI 或正式部署已通過。
+GitHub CI 已確認成功：[Verify cashback / 34332143678](https://github.com/Urash0519/gigabyte-Cashback/actions/runs/34332143678)，對應程式提交 `c2216c28285c628bc64342a16ed1b35da031f7c8`，包含後端測試、乾淨 Compose 建置／migration 與 HTTP 整合驗證。電腦重啟後已確認本機與遠端 main 一致、工作目錄乾淨。
+
+Google OAuth 與銀行 API 依決策延後。Email 目前為 outbox／模擬處理；會員、RMA、OCR 及病毒掃描外部服務未整合，現版提供人工檢核。正式五國營運矩陣、語言文案、銀行檔案格式、容量／備援與保存政策仍需核定。CI 通過不代表已部署正式環境或完成營運 UAT。

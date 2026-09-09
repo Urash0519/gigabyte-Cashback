@@ -77,6 +77,34 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
         return draft;
     }
 
+    [Fact]
+    public async Task Public_discovery_should_hide_test_fixtures_using_published_provenance_only()
+    {
+        var normal = await PublishedCampaignAsync();
+        var fixture = await PublishedCampaignAsync();
+        fixture.Data.LegacyFields["dataPurpose"] = "integration-test";
+        fixture.Data.ConcurrencyStamp = fixture.ConcurrencyStamp;
+        await WithUnitOfWorkAsync(() => _service.SaveCampaignAsync(fixture.Id, fixture.Data));
+        // A draft-only marker must not change public discovery before publication.
+        (await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync())).ShouldContain(x => x.Id == fixture.Id);
+        await WithUnitOfWorkAsync(() => _service.PublishCampaignAsync(fixture.Id, new() { Reason = "Mark synthetic fixture" }));
+
+        var legacy = await PublishedCampaignAsync();
+        legacy.Data.Slug = "smoke-123";
+        legacy.Data.Description = "Automated integration test";
+        legacy.Data.Terms = "Synthetic test terms";
+        legacy.Data.ConcurrencyStamp = legacy.ConcurrencyStamp;
+        await WithUnitOfWorkAsync(() => _service.SaveCampaignAsync(legacy.Id, legacy.Data));
+        await WithUnitOfWorkAsync(() => _service.PublishCampaignAsync(legacy.Id, new() { Reason = "Historical fixture" }));
+
+        var visible = await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync());
+        visible.ShouldContain(x => x.Id == normal.Id);
+        visible.ShouldNotContain(x => x.Id == fixture.Id || x.Id == legacy.Id);
+        var managed = await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync(true));
+        managed.ShouldContain(x => x.Id == fixture.Id);
+        managed.ShouldContain(x => x.Id == legacy.Id);
+    }
+
     private async Task ApproveAsync(Guid id)
     {
         foreach (var check in new[] { "membership", "invoice", "serial", "eligibility", "duplicates", "rma", "evidence" })
@@ -267,5 +295,25 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
         {
             await WithUnitOfWorkAsync(async () => (await _service.GetClaimsAsync()).ShouldNotContain(x => x.Id == draft.Id));
         }
+    }
+
+    [Fact]
+    public async Task Existing_claim_should_keep_its_campaign_snapshot_after_discovery_is_hidden()
+    {
+        var campaign = await PublishedCampaignAsync();
+        var originalName = campaign.Data.Name;
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        campaign = (await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync(true))).Single(x => x.Id == campaign.Id);
+        campaign.Data.Name = "Changed campaign name";
+        campaign.Data.LegacyFields["dataPurpose"] = "integration-test";
+        campaign.Data.ConcurrencyStamp = campaign.ConcurrencyStamp;
+        await WithUnitOfWorkAsync(() => _service.SaveCampaignAsync(campaign.Id, campaign.Data));
+        await WithUnitOfWorkAsync(() => _service.PublishCampaignAsync(campaign.Id, new() { Reason = "New hidden version" }));
+        (await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync())).ShouldNotContain(x => x.Id == campaign.Id);
+        var associated = await WithUnitOfWorkAsync(() => _service.GetClaimCampaignAsync(draft.Id));
+        associated.Id.ShouldBe(campaign.Id);
+        associated.PublishedVersion.ShouldBe(1);
+        associated.Data.Name.ShouldBe(originalName);
+        associated.Versions.ShouldBeEmpty();
     }
 }

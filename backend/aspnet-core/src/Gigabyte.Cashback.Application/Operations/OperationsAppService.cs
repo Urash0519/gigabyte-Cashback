@@ -109,9 +109,19 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
         var all = await campaigns.GetListAsync();
         var result = new List<CampaignDto>();
         foreach (var c in all.Where(x => admin || x.PublishedVersion > 0))
-            result.Add(await CampaignDto(c, admin));
+        {
+            var campaign = await CampaignDto(c, admin);
+            if (admin || !IsIntegrationTestCampaign(campaign.Data))
+                result.Add(campaign);
+        }
         return result;
     }
+    // Keep synthetic fixtures available to operators and their existing claims, but out of public discovery.
+    // The narrow legacy signature also covers fixtures created before dataPurpose was introduced.
+    private static bool IsIntegrationTestCampaign(CampaignInput data) =>
+        data.LegacyFields.GetValueOrDefault("dataPurpose") == "integration-test" ||
+        (data.Slug.StartsWith("smoke-", StringComparison.Ordinal) &&
+         data.Description == "Automated integration test" && data.Terms == "Synthetic test terms");
     public async Task<CampaignDto> CreateCampaignAsync(CampaignInput input)
     {
         await Permit(CashbackPermissions.Campaigns.Manage);
@@ -211,6 +221,18 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
         var result = new List<ClaimDto>();
         foreach (var c in all.OrderByDescending(x => x.CreationTime))
             result.Add(await ClaimDto(c));
+        return result;
+    }
+    public async Task<CampaignDto> GetClaimCampaignAsync(Guid id)
+    {
+        var claim = await claims.GetAsync(id);
+        await Owner(claim);
+        var campaign = await campaigns.GetAsync(claim.CampaignId);
+        var result = await CampaignDto(campaign, false);
+        // Existing claims remain usable even when their campaign is hidden from discovery or republished.
+        var version = await versions.GetAsync(claim.CampaignVersionId!.Value);
+        result.Data = Decode<CampaignInput>(version.SnapshotJson);
+        result.PublishedVersion = version.Version;
         return result;
     }
     [DisableAuditing]

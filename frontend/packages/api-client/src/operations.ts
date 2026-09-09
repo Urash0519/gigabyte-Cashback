@@ -287,6 +287,8 @@ export const api = {
     post<Campaign>(`/api/operations/campaigns/${id}/copy`),
   publishCampaign: (id: string, reason: string) =>
     post<Campaign>(`/api/operations/campaigns/${id}/publish`, { reason }),
+  claimCampaign: (claimId: string) =>
+    apiRequest<Campaign>(`/api/operations/claims/${claimId}/campaign`),
   claims: (admin = false) =>
     apiRequest<Claim[]>(`/api/operations/claims?admin=${admin}`),
   createClaim: (data: ClaimInput) =>

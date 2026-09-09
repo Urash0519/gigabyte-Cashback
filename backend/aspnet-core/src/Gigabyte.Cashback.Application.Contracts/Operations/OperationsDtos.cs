@@ -419,6 +419,7 @@ public partial interface IOperationsAppService : IApplicationService
     Task<CampaignDto> CopyCampaignAsync(Guid id);
     Task<CampaignDto> PublishCampaignAsync(Guid id, ReasonInput input);
     Task<List<ClaimDto>> GetClaimsAsync(bool admin = false);
+    Task<CampaignDto> GetClaimCampaignAsync(Guid id);
     Task<ClaimDto> CreateClaimAsync(ClaimInput input);
     Task<ClaimDto> SaveClaimAsync(Guid id, ClaimInput input);
     Task<ClaimDto> SubmitClaimAsync(Guid id);

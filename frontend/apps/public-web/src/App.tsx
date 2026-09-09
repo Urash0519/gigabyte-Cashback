@@ -19,10 +19,15 @@ import {
 } from "@gigabyte-cashback/ui";
 import { ClaimForm } from "./ClaimForm";
 import { BankChange } from "./BankChange";
+import { Promotions, PromotionDetails } from "./Promotions";
+import "./public.css";
 export function App() {
   const [session, setSession] = useState<Session>();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
+  const [claimCampaigns, setClaimCampaigns] = useState<
+    Record<string, Campaign>
+  >({});
   const [view, setView] = useState("campaigns");
   const [market, setMarket] = useState("DE");
   const [campaignId, setCampaignId] = useState("");
@@ -30,15 +35,39 @@ export function App() {
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [message, setMessage] = useState("");
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: "instant" });
+  }, [view]);
   const campaign = campaigns.find((c) => c.id === campaignId);
   const claim = claims.find((c) => c.id === claimId);
+  const claimCampaign = claimCampaigns[claimId] ?? campaign;
   const logged = Boolean(session?.isAuthenticated);
+  const loadClaims = useCallback(async () => {
+    const rows = await api.claims();
+    // Fetch once per pinned version. These owner-only snapshots never enter discovery.
+    const versions = [
+      ...new Map(rows.map((c) => [c.campaignVersionId, c])).values(),
+    ];
+    const entries = await Promise.all(
+      versions.map(
+        async (c) =>
+          [c.campaignVersionId, await api.claimCampaign(c.id)] as const,
+      ),
+    );
+    const snapshots = new Map(entries);
+    setClaimCampaigns(
+      Object.fromEntries(
+        rows.map((c) => [c.id, snapshots.get(c.campaignVersionId)!]),
+      ),
+    );
+    setClaims(rows);
+  }, []);
   const reload = useCallback(async () => {
     setCampaigns(await api.campaigns());
     const s = await api.session();
     setSession(s);
-    if (s.isAuthenticated) setClaims(await api.claims());
-  }, []);
+    if (s.isAuthenticated) await loadClaims();
+  }, [loadClaims]);
   useEffect(() => {
     void reload().catch((e) => setError(e.message));
   }, [reload]);
@@ -79,23 +108,27 @@ export function App() {
     setView("form");
   };
   return (
-    <>
+    <div className="cashback-public">
       <div className="uat-banner">
         Internal evaluation · use synthetic personal and bank details
       </div>
       <header className="topbar">
-        <div className="brand">
+        <button
+          className="brand public-brand"
+          aria-label="GIGABYTE Cashback home"
+          onClick={() => setView("campaigns")}
+        >
           GIGABYTE <small>CASHBACK</small>
-        </div>
-        <nav>
+        </button>
+        <nav aria-label="Main navigation">
           <button
-            className="button button-dark"
+            className={`public-nav-link ${["campaigns", "detail"].includes(view) ? "active" : ""}`}
             onClick={() => setView("campaigns")}
           >
-            Promotions
+            Cashback offers
           </button>
           <button
-            className="button button-dark"
+            className={`public-nav-link ${["claims", "case"].includes(view) ? "active" : ""}`}
             onClick={() => {
               setView(logged ? "claims" : "login");
               setCampaignId("");
@@ -103,6 +136,24 @@ export function App() {
           >
             My claims
           </button>
+          <label className="public-market">
+            <span className="market-code">{market}</span>
+            <select
+              aria-label="Promotion market"
+              value={market}
+              disabled={view === "form"}
+              onChange={(e) => {
+                setMarket(e.target.value);
+                setView("campaigns");
+              }}
+            >
+              {markets.map((m) => (
+                <option key={m} value={m}>
+                  {marketNames[m]}
+                </option>
+              ))}
+            </select>
+          </label>
           <a href={urls.admin}>Administration ↗</a>
           {logged ? (
             <>
@@ -114,6 +165,7 @@ export function App() {
                     await api.logout();
                     setSession(await api.session());
                     setClaims([]);
+                    setClaimCampaigns({});
                     setView("campaigns");
                   })
                 }
@@ -131,7 +183,13 @@ export function App() {
           )}
         </nav>
       </header>
-      <main className="public-main">
+      <main
+        className={
+          view === "campaigns" || view === "detail"
+            ? "promotion-main"
+            : "public-main"
+        }
+      >
         {error && (
           <p className="message error" role="alert">
             {error}
@@ -156,7 +214,7 @@ export function App() {
               onClick={() =>
                 void run(async () => {
                   setSession(await api.login("public"));
-                  setClaims(await api.claims());
+                  await loadClaims();
                   if (campaign) {
                     const draft = await api.createClaim({
                       ...blankClaim(campaign.id),
@@ -179,185 +237,34 @@ export function App() {
           </section>
         )}
         {view === "campaigns" && (
-          <>
-            <div className="page-head">
-              <div>
-                <h1>Cashback promotions</h1>
-                <p>Explore eligible products and claim your reward.</p>
-              </div>
-              <select
-                className="filter"
-                aria-label="Promotion market"
-                value={market}
-                onChange={(e) => setMarket(e.target.value)}
-              >
-                {markets.map((m) => (
-                  <option key={m} value={m}>
-                    {marketNames[m]}
-                  </option>
-                ))}
-              </select>
-            </div>
-            <div className="grid">
-              {campaigns
-                .filter((c) => c.data.markets.includes(market))
-                .map((c) => (
-                  <article className="card" key={c.id}>
-                    <div className="campaign-accent" />
-                    <Badge>{c.data.status}</Badge>
-                    <h2>{c.data.name}</h2>
-                    <p>{c.data.description}</p>
-                    <dl>
-                      <dt className="muted">Purchase period</dt>
-                      <dd style={{ marginLeft: 0 }}>
-                        {c.data.purchaseStart.slice(0, 10)} –{" "}
-                        {c.data.purchaseEnd.slice(0, 10)}
-                      </dd>
-                      <dt className="muted">Claim deadline</dt>
-                      <dd style={{ marginLeft: 0 }}>
-                        {c.data.claimEnd.slice(0, 10)} ({c.data.timeZone})
-                      </dd>
-                    </dl>
-                    <p>
-                      <b>
-                        Up to{" "}
-                        {money(
-                          Math.max(
-                            0,
-                            ...c.data.products.map((p) => p.cashbackMinor),
-                          ),
-                          c.data.currency,
-                        )}
-                      </b>{" "}
-                      per eligible product
-                    </p>
-                    <button
-                      className="button button-primary"
-                      onClick={() => {
-                        setCampaignId(c.id);
-                        setView("detail");
-                      }}
-                    >
-                      View promotion
-                    </button>
-                  </article>
-                ))}
-            </div>
-            {!campaigns.filter((c) => c.data.markets.includes(market))
-              .length && <Empty>No published campaigns for this market.</Empty>}
-          </>
+          <Promotions
+            campaigns={campaigns}
+            market={market}
+            onOpen={(c) => {
+              setCampaignId(c.id);
+              setView("detail");
+            }}
+            onTrack={() => {
+              setCampaignId("");
+              setView(logged ? "claims" : "login");
+            }}
+          />
         )}
         {view === "detail" && campaign && (
-          <>
-            <div className="page-head">
-              <div>
-                <Badge>{campaign.data.type}</Badge>
-                <h1>{campaign.data.name}</h1>
-                <p>{campaign.data.description}</p>
-              </div>
-              <button
-                className="button button-primary"
-                disabled={
-                  busy ||
-                  !campaign.data.acceptingClaims ||
-                  campaign.availableMinor <= 0
-                }
-                onClick={() => void run(() => start(campaign))}
-              >
-                {campaign.data.acceptingClaims && campaign.availableMinor > 0
-                  ? "Start claim"
-                  : "Currently not accepting claims"}
-              </button>
-            </div>
-            <div className="metrics">
-              <div className="metric">
-                <span>Purchase period</span>
-                <strong style={{ fontSize: "1rem" }}>
-                  {campaign.data.purchaseStart.slice(0, 10)} –{" "}
-                  {campaign.data.purchaseEnd.slice(0, 10)}
-                </strong>
-              </div>
-              <div className="metric">
-                <span>Application period</span>
-                <strong style={{ fontSize: "1rem" }}>
-                  {campaign.data.claimStart.slice(0, 10)} –{" "}
-                  {campaign.data.claimEnd.slice(0, 10)}
-                </strong>
-              </div>
-              <div className="metric">
-                <span>Waiting period</span>
-                <strong>{campaign.data.waitingDays} days</strong>
-              </div>
-            </div>
-            <Panel title="Eligible products">
-              <div className="table-wrap">
-                <table>
-                  <thead>
-                    <tr>
-                      <th>Series</th>
-                      <th>Product / SKU</th>
-                      <th>Category</th>
-                      <th>Cashback</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {campaign.data.products.map((p) => (
-                      <tr key={p.id}>
-                        <td>{p.series}</td>
-                        <td>
-                          {p.model}
-                          <br />
-                          <small>{p.id}</small>
-                        </td>
-                        <td>{p.category}</td>
-                        <td>
-                          {money(p.cashbackMinor, campaign.data.currency)}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </Panel>
-            <Panel title="Participating retailers">
-              <div className="grid">
-                {campaign.data.retailers.map((r) => (
-                  <div key={r.id}>
-                    <b>{r.name}</b>
-                    <p>{r.country}</p>
-                  </div>
-                ))}
-              </div>
-            </Panel>
-            <Panel title="Terms, privacy & help">
-              <details>
-                <summary>Terms — version {campaign.data.termsVersion}</summary>
-                <p className="pre-wrap">{campaign.data.terms}</p>
-              </details>
-              <details>
-                <summary>Privacy notice</summary>
-                <p className="pre-wrap">{campaign.data.privacy}</p>
-              </details>
-              <details>
-                <summary>Frequently asked questions</summary>
-                <p className="pre-wrap">{campaign.data.faq}</p>
-              </details>
-              {campaign.data.supportEmail && (
-                <p>
-                  Support:{" "}
-                  <a href={`mailto:${campaign.data.supportEmail}`}>
-                    {campaign.data.supportEmail}
-                  </a>
-                </p>
-              )}
-            </Panel>
-          </>
+          <PromotionDetails
+            key={campaign.id + market}
+            campaign={campaign}
+            market={market}
+            busy={busy}
+            onBack={() => setView("campaigns")}
+            onStart={() => void run(() => start(campaign))}
+          />
         )}
-        {view === "form" && claim && campaign && (
+        {view === "form" && claim && claimCampaign && (
           <ClaimForm
             key={claim.id}
             claim={claim}
-            campaign={campaign}
+            campaign={claimCampaign}
             onSaved={update}
             onBack={() => setView("claims")}
           />
@@ -402,8 +309,10 @@ export function App() {
                           <small>{date(c.submittedAt ?? c.createdAt)}</small>
                         </td>
                         <td>
-                          {campaigns.find((x) => x.id === c.data.campaignId)
-                            ?.data.name ?? c.data.campaignId}
+                          {claimCampaigns[c.id]?.data.name ??
+                            campaigns.find((x) => x.id === c.data.campaignId)
+                              ?.data.name ??
+                            c.data.campaignId}
                         </td>
                         <td>
                           <Badge>{c.reviewStatus}</Badge>
@@ -541,6 +450,6 @@ export function App() {
         )}
       </main>
       <footer className="footer">GIGABYTE Cashback · Sample environment</footer>
-    </>
+    </div>
   );
 }

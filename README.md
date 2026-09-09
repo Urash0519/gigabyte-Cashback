@@ -13,6 +13,10 @@ Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。
 
 ## 本機啟動
 
+Public-web 已依 Prototype 03 補齊首頁／活動主視覺、詳情搜尋與頁籤、申請摘要／附件卡片／成功頁；通路選取仍為下拉選單，My claims 維持原版。詳見 [前台對齊範圍](docs/Public-Web-Prototype-Alignment.md)。
+
+啟動後可用 Node 24 執行 `node scripts/seed-showcase.mjs` 建立展示活動。腳本可重跑且不覆寫既有內容。整合測試活動只保留於後台與既有案件，前台活動列表不再顯示 Smoke 測試資料。
+
 需求：Docker Desktop（Linux containers）。本機程式測試另需 .NET 10 SDK、Node 24、pnpm 10.26.1。
 
 ```powershell

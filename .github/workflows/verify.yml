@@ -1,0 +1,30 @@
+name: Verify cashback
+on:
+  push:
+    branches: [main]
+  pull_request:
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 10.0.x
+      - name: Backend tests
+        working-directory: backend/aspnet-core
+        run: dotnet test Gigabyte.Cashback.slnx --verbosity minimal
+      - name: Build and migrate local stack
+        run: docker compose up --build -d --wait
+      - name: Verify business operations
+        run: node scripts/verify-operations.mjs
+      - name: Container logs
+        if: always()
+        run: docker compose logs --no-color --tail 100
+      - name: Stop stack
+        if: always()
+        run: docker compose down

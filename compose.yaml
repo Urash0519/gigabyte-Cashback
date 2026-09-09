@@ -1,0 +1,89 @@
+name: gigabyte-cashback
+
+services:
+  postgres:
+    image: postgres:17-alpine
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-cashback}
+      POSTGRES_USER: ${POSTGRES_USER:-cashback}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-cashback-local-only}
+    ports:
+      - "5432:5432"
+    volumes:
+      - cashback-postgres:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-cashback} -d ${POSTGRES_DB:-cashback}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+    restart: unless-stopped
+
+  db-migrator:
+    build:
+      context: ./backend/aspnet-core
+      dockerfile: Dockerfile.migrator
+    environment:
+      DOTNET_ENVIRONMENT: Development
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-cashback};Username=${POSTGRES_USER:-cashback};Password=${POSTGRES_PASSWORD:-cashback-local-only}
+      StringEncryption__DefaultPassPhrase: ${STRING_ENCRYPTION_PASSPHRASE:-local-compose-passphrase-change-me}
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+
+  api:
+    build:
+      context: ./backend/aspnet-core
+      dockerfile: Dockerfile.api
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      ConnectionStrings__Default: Host=postgres;Port=5432;Database=${POSTGRES_DB:-cashback};Username=${POSTGRES_USER:-cashback};Password=${POSTGRES_PASSWORD:-cashback-local-only}
+      StringEncryption__DefaultPassPhrase: ${STRING_ENCRYPTION_PASSPHRASE:-local-compose-passphrase-change-me}
+      App__SelfUrl: http://localhost:44305
+      App__ClientUrl: http://localhost:5173
+      App__CorsOrigins: http://localhost:5173,http://localhost:5174
+      AuthServer__Authority: http://localhost:44305
+      Foundation__AllowVerificationActions: "true"
+      BlobStorage__Provider: FileSystem
+      BlobStorage__FileSystem__BasePath: /app/App_Data/blobs
+    ports:
+      - "44305:8080"
+    volumes:
+      - cashback-blobs:/app/App_Data/blobs
+      - cashback-data-protection:/root/.aspnet/DataProtection-Keys
+    depends_on:
+      db-migrator:
+        condition: service_completed_successfully
+    restart: unless-stopped
+
+  public-web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: public-web
+        VITE_API_BASE_URL: http://localhost:44305
+    ports:
+      - "5173:8080"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+  admin-web:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        APP_NAME: admin-web
+        VITE_API_BASE_URL: http://localhost:44305
+    ports:
+      - "5174:8080"
+    depends_on:
+      - api
+    restart: unless-stopped
+
+volumes:
+  cashback-postgres:
+  cashback-blobs:
+  cashback-data-protection:

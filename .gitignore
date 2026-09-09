@@ -55,3 +55,53 @@ CodeCoverage/
 *.VisualState.xml
 TestResult.xml
 nunit-*.xml
+
+# React workspace
+frontend/node_modules/
+frontend/apps/*/dist/
+frontend/*.tsbuildinfo
+.pnpm-store/
+
+# Local application data
+App_Data/
+
+# Dependencies, frontend builds and caches (all workspaces)
+node_modules/
+.pnpm-store/
+.next/
+.vinext/
+.wrangler/
+.vite/
+.turbo/
+dist/
+build/
+cloudrun-dist/
+gh-pages-dist/
+.gh-pages-publish/
+.uat-test/
+*.tsbuildinfo
+coverage/
+playwright-report/
+test-results/
+
+# Local credentials and runtime state; examples remain versioned
+.env.*
+!.env.example
+!.env.*.example
+appsettings.secrets.json
+*.pfx
+*.p12
+*.pem
+*.key
+*.db
+*.db-shm
+*.db-wal
+*.log
+.openai/
+tmp/
+.vs/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Keep source documentation and deterministic dependency lockfiles tracked.

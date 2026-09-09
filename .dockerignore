@@ -1,0 +1,10 @@
+.git
+.gh-pages-publish
+site
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/Logs
+**/.env
+tmp

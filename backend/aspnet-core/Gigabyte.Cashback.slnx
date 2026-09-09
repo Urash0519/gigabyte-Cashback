@@ -1,0 +1,35 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/Gigabyte.Cashback.Application.Contracts/Gigabyte.Cashback.Application.Contracts.csproj" />
+    <Project Path="src/Gigabyte.Cashback.Application/Gigabyte.Cashback.Application.csproj" />
+
+
+
+
+
+
+
+
+
+    <Project Path="src/Gigabyte.Cashback.DbMigrator/Gigabyte.Cashback.DbMigrator.csproj" />
+    <Project Path="src/Gigabyte.Cashback.Domain.Shared/Gigabyte.Cashback.Domain.Shared.csproj" />
+    <Project Path="src/Gigabyte.Cashback.Domain/Gigabyte.Cashback.Domain.csproj" />
+    <Project Path="src/Gigabyte.Cashback.EntityFrameworkCore/Gigabyte.Cashback.EntityFrameworkCore.csproj" />
+    <Project Path="src/Gigabyte.Cashback.HttpApi.Client/Gigabyte.Cashback.HttpApi.Client.csproj" />
+
+    <Project Path="src/Gigabyte.Cashback.HttpApi.Host/Gigabyte.Cashback.HttpApi.Host.csproj" />
+    <Project Path="src/Gigabyte.Cashback.HttpApi/Gigabyte.Cashback.HttpApi.csproj" />
+
+
+
+  </Folder>
+  <Folder Name="/test/">
+    <Project Path="test/Gigabyte.Cashback.Application.Tests/Gigabyte.Cashback.Application.Tests.csproj" />
+    <Project Path="test/Gigabyte.Cashback.Domain.Tests/Gigabyte.Cashback.Domain.Tests.csproj" />
+    <Project Path="test/Gigabyte.Cashback.EntityFrameworkCore.Tests/Gigabyte.Cashback.EntityFrameworkCore.Tests.csproj" />
+    <Project Path="test/Gigabyte.Cashback.HttpApi.Client.ConsoleTestApp/Gigabyte.Cashback.HttpApi.Client.ConsoleTestApp.csproj" />
+
+    <Project Path="test/Gigabyte.Cashback.TestBase/Gigabyte.Cashback.TestBase.csproj" />
+
+  </Folder>
+</Solution>

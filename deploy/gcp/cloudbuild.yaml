@@ -1,0 +1,52 @@
+# Build and push only. This file intentionally contains no Cloud Run deployment step.
+substitutions:
+  _REGION: asia-east1
+  _REPOSITORY: gigabyte-cashback
+  _TAG: manual
+  _API_BASE_URL: https://REPLACE_API_HOST
+  _PUBLIC_WEB_URL: https://REPLACE_PUBLIC_HOST
+  _ADMIN_WEB_URL: https://REPLACE_ADMIN_HOST
+
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: [build, -f, backend/aspnet-core/Dockerfile.api, -t, ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/api:${_TAG}, backend/aspnet-core]
+  - name: gcr.io/cloud-builders/docker
+    args: [build, -f, backend/aspnet-core/Dockerfile.migrator, -t, ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/db-migrator:${_TAG}, backend/aspnet-core]
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - frontend/Dockerfile
+      - --build-arg
+      - APP_NAME=public-web
+      - --build-arg
+      - VITE_API_BASE_URL=${_API_BASE_URL}
+      - --build-arg
+      - VITE_PUBLIC_WEB_URL=${_PUBLIC_WEB_URL}
+      - --build-arg
+      - VITE_ADMIN_WEB_URL=${_ADMIN_WEB_URL}
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/public-web:${_TAG}
+      - frontend
+  - name: gcr.io/cloud-builders/docker
+    args:
+      - build
+      - -f
+      - frontend/Dockerfile
+      - --build-arg
+      - APP_NAME=admin-web
+      - --build-arg
+      - VITE_API_BASE_URL=${_API_BASE_URL}
+      - --build-arg
+      - VITE_PUBLIC_WEB_URL=${_PUBLIC_WEB_URL}
+      - --build-arg
+      - VITE_ADMIN_WEB_URL=${_ADMIN_WEB_URL}
+      - -t
+      - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/admin-web:${_TAG}
+      - frontend
+
+images:
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/api:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/db-migrator:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/public-web:${_TAG}
+  - ${_REGION}-docker.pkg.dev/$PROJECT_ID/${_REPOSITORY}/admin-web:${_TAG}

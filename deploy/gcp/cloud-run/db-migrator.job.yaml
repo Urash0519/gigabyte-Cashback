@@ -1,0 +1,35 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: gigabyte-cashback-db-migrator
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/cloudsql-instances: side-project-platform:asia-east1:gigabyte-cashback
+        run.googleapis.com/secrets: REPLACE_DB_SECRET:projects/REPLACE_PROJECT_NUMBER/secrets/gigabyte-cashback-db-connection,REPLACE_ENCRYPTION_SECRET:projects/REPLACE_PROJECT_NUMBER/secrets/gigabyte-cashback-string-encryption
+    spec:
+      template:
+        spec:
+          serviceAccountName: gigabyte-cashback-runtime@side-project-platform.iam.gserviceaccount.com
+          maxRetries: 1
+          timeoutSeconds: "900"
+          containers:
+            - image: asia-east1-docker.pkg.dev/side-project-platform/gigabyte-cashback/db-migrator:REPLACE_TAG
+              resources:
+                limits:
+                  cpu: "1"
+                  memory: 1Gi
+              env:
+                - name: DOTNET_ENVIRONMENT
+                  value: Production
+                - name: ConnectionStrings__Default
+                  valueFrom:
+                    secretKeyRef:
+                      name: REPLACE_DB_SECRET
+                      key: latest
+                - name: StringEncryption__DefaultPassPhrase
+                  valueFrom:
+                    secretKeyRef:
+                      name: REPLACE_ENCRYPTION_SECRET
+                      key: latest

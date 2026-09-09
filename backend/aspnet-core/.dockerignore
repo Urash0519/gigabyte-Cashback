@@ -1,0 +1,10 @@
+**/bin
+**/obj
+**/Logs
+**/TestResults
+.git
+.vs
+**/appsettings.secrets.json
+**/*.pfx
+**/*.p12
+**/App_Data

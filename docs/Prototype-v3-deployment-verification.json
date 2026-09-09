@@ -1,0 +1,42 @@
+{
+  "verifiedAt": "2026-09-02T16:13:16.7780797+08:00",
+  "account": "yoyo.chen@gigabyte.com",
+  "project": "side-project-platform",
+  "region": "asia-east1",
+  "service": "gigabyte-cashback",
+  "revision": "gigabyte-cashback-00005-6sq",
+  "trafficPercent": 100,
+  "publicInvocation": true,
+  "url": "https://gigabyte-cashback-219894818230.asia-east1.run.app",
+  "health": {
+    "httpStatus": 200,
+    "application": "gigabyte-cashback",
+    "version": "3.0.0",
+    "mode": "internal-uat",
+    "integrations": "simulated"
+  },
+  "home": {
+    "httpStatus": 200,
+    "containsPrototype03": true,
+    "robots": "noindex, nofollow, noarchive"
+  },
+  "assets": {
+    "script": "/assets/index-BOMa3_y-.js",
+    "scriptSha256MatchesLocalBuild": true,
+    "stylesheet": "/assets/index-CTs3jMkm.css",
+    "stylesheetSha256MatchesLocalBuild": true
+  },
+  "verification": {
+    "typescript": "passed",
+    "automatedTests": { "passed": 23, "failed": 0 },
+    "productionBuild": "passed"
+  },
+  "serviceConfigurationPreserved": {
+    "serviceAccount": "gigabyte-cashback-uat@side-project-platform.iam.gserviceaccount.com",
+    "cpu": "1",
+    "memory": "256Mi",
+    "containerConcurrency": 80,
+    "timeoutSeconds": 300,
+    "maxScale": 2
+  }
+}

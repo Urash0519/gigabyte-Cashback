@@ -1,98 +1,90 @@
-# GIGABYTE Cashback Prototype
+# GIGABYTE Cashback
 
-這是一個 GIGABYTE 歐洲 Cashback 活動站台的互動式示意原型，呈現消費者從查看活動、提交申請到追蹤回饋，以及營運人員從活動管理、案件審核到 Cashback 發放與報表追蹤的完整畫面流程。
+Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。需求以 [Development Spec v0.2](docs/Phase1-Development-Spec.md) 為主；[SA v0.6](docs/Gigabyte-Cashback-SA.md) 已同步。`site/` 保留 v3 模擬原型供歷史參考，現在的業務實作位於 `frontend/` 與 `backend/aspnet-core/`。
 
-## 線上預覽
+## 本版功能
 
-- [GitHub Pages 示意站台](https://urash0519.github.io/gigabyte-Cashback/)
-- 預設進入消費者前台，可由右上角 **Admin preview** 切換至管理後台。
+- Campaign：建立、複製、編輯、發布不可變版本、比較；舊站名稱／類型／期間／國家與狀態分類，產品／系列／金額、通路有效期、內容、限制與預算設定。
+- Claims：伺服器 Draft、完整個人／地址／銀行欄位、同發票多產品、產品日期／通路、文件上傳、同意版本、伺服器金額計算、序號與人／戶／活動互斥規則。
+- Tracker／客服：本人案件、補件更正、歷史版本、取消請求、案件訊息與受控銀行更改。
+- Operations：工作佇列、七項人工檢核、核准／拒絕／補件、Risk Hold、稽核及通知佇列。
+- Finance：交易式 Reserved／Approved Unpaid／Paid、核放、固定付款 ID／批次、受控 CSV、人工結果及對帳；Unknown 先查核、Confirmed Failed 才可重試。
+- Reports：活動／市場／居住國／購買國／銀行國／語言／狀態／通路／產品／品類／週／月與 Hold，原幣分組，區分 Claim 與 Item，核准率與營運指標。
 
-## 消費者前台
+## 本機啟動
 
-### Cashback 活動首頁
+需求：Docker Desktop（Linux containers）。本機程式測試另需 .NET 10 SDK、Node 24、pnpm 10.26.1。
 
-- 顯示進行中與即將開始的 Cashback 活動。
-- 呈現活動名稱、回饋金額、購買期間與申請截止日。
-- 提供查看活動、開始申請及追蹤既有申請的入口。
-- 示意國家與語言選擇，目前以德國英文站為例。
+```powershell
+Copy-Item .env.example .env
+# 修改 .env 中的本機 DB 密碼與 STRING_ENCRYPTION_PASSPHRASE。
+docker compose up --build -d
+.\scripts\verify-local.ps1
+node scripts/verify-operations.mjs
+```
 
-### 活動詳情
+| 入口 | URL |
+|---|---|
+| 消費者前台 | http://localhost:5173 |
+| 管理後台 | http://localhost:5174 |
+| Swagger | http://localhost:44305/swagger |
+| API health | http://localhost:44305/health |
 
-- 查詢符合資格的產品、料號與 Cashback 金額。
-- 查看合格購買通路、申請步驟、活動條款及常見問題。
-- 提供產品搜尋與直接進入申請流程的操作入口。
+先開後台按 **Sign in for development**。按鈕透過伺服器 Cookie 建立固定身份 `yoyo.chen@gigabyte.com`，前台與後台均可使用；同一瀏覽器共用 Cookie，切換身份區域後可重新按登入。期限 8 小時。Google OAuth 尚未串接，不建立另一套密碼帳號。DevelopmentAuth 必須明確啟用且 ASPNETCORE_ENVIRONMENT 必須為 Development；Production 不提供此登入。
 
-### Cashback 申請流程
+容器持久化 PostgreSQL、BLOB 與 Data Protection key。`docker compose down` 保留資料 volume；不要任意刪除 volume。只輸入合成測試資料。
 
-以四個步驟呈現完整申請體驗：
+### 開發與 migration
 
-1. **Purchase**：填寫購買國家、日期、通路、發票號碼與訂單號碼。
-2. **Product**：確認產品型號、料號與序號，並示意串接產品 API 的驗證結果。
-3. **Documents**：上傳發票或收據，以及產品本體的序號標籤照片。
-4. **Review**：檢查申請摘要、同意條款並送出申請。
+```powershell
+cd frontend
+corepack pnpm install --frozen-lockfile
+corepack pnpm dev:public
+# 另一終端執行 corepack pnpm dev:admin
+```
 
-送出後會產生申請編號，並顯示預估 Cashback 金額與一般審核時間。
+Vite `/api` proxy 指向 localhost:44305；Docker 前端使用建置時 API URL。修改 VITE_* 後需重新建置前端映像。
 
-### 我的申請
+```powershell
+cd backend/aspnet-core
+dotnet restore Gigabyte.Cashback.slnx
+dotnet test Gigabyte.Cashback.slnx
+```
 
-- 顯示會員的 Cashback 申請清單、申請編號、產品、金額及狀態。
-- 呈現「需要補件」與「Cashback 已發放」等不同案件情境。
-- 查看案件時間軸、審核進度及發放結果。
-- 針對補件案件提供重新上傳文件的操作入口。
+所有 schema 異動附 EF migration／ModelSnapshot，Compose 的 DbMigrator 先完成再啟 API。禁止以 EnsureCreated 代替升級。ABP 分層保留 Domain aggregates、Contracts、Application services、Repository、Unit of Work、Permission 與 Audit；Controller 僅處理 HTTP 邊界。
 
-### 幫助中心
+銀行資料透過 ABP StringEncryption 加密，API 一般回覆遮罩。非 Development 啟動必須提供至少 32 字元的 `StringEncryption__DefaultPassPhrase` secret；更換此 key 前需規劃既有資料解密／輪替，不能直接換掉。付款匯出需要 sensitive-data permission 並留下業務存取事件。
 
-- 依申請資格、文件、付款及帳戶等主題呈現支援內容。
-- 提供可展開的常見問題與聯絡客服入口。
+## 驗收路徑
 
-## 管理後台
+1. 後台建立 Campaign，設定產品／通路／期間／規則／預算與條款，儲存後填理由發布。
+2. 前台選市場與活動，按開發登入，填合成個資／銀行／購買資料與多產品，附發票及各產品序號圖後送出。
+3. 後台 Claims 完成 membership、invoice、serial、eligibility、duplicates、rma、evidence 七項檢核；測試 Hold、補件、解除及核准。
+4. Payments 選已核准且無 Hold 的案件核放；匯出只代表資料交付，尚未付款。
+5. 手動記錄 Submitted／Processing／Unknown；輸入憑證、正確金額及幣別後確認 Succeeded 或 Failed。Unknown 禁止重試。
+6. Reports 核对幣別、Claim／Item 計數與預算，Audit 確認操作者與理由，Notifications 查看模擬通知。
 
-### 營運總覽
+`scripts/verify-operations.mjs` 會新增有唯一名稱的合成 Campaign／Claim／Payment，驗證真實 HTTP／PostgreSQL／BLOB 路徑；不會呼叫銀行，也不會發送 Email。測試資料保留供檢視。GitHub Actions 執行後端測試、Compose 建置及同一腳本。
 
-- 顯示申請量、待審核案件、已核准金額及已發放金額。
-- 呈現申請趨勢、審核佇列、活動預算使用率及平均審核時間。
-- 集中提示發放失敗、即將超過 SLA 與重複發票警示等異常事項。
+## 尚未串接與正式使用界線
 
-### 申請案件審核
+本機驗證：前後台型別檢查及 Docker 建置通過、後端 25 項測試通過、HTTP／PostgreSQL 整合 22 項通過；瀏覽器登入及活動儲存驗證完成。詳見 [Phase 1 驗證紀錄](docs/Phase1-Verification.md)。
 
-- 依案件狀態切換清單並示意篩選、排序及匯出功能。
-- 查看消費者、產品、購買通路、Cashback 金額與風險等級。
-- 顯示產品 API、購買期間、通路、重複序號與發票辨識信心度等自動檢查結果。
-- 預覽發票與案件關鍵資料。
-- 示意 **要求補件、拒絕、核准** 三種審核決策。
+- 依本次範圍排除 Google OAuth、銀行／付款供應商 API、Webhook、真實自動付款。
+- 通知目前保存佇列、模板／處理紀錄並提供 **Simulate**，不代表已寄出；實際 SMTP／郵件供應商尚未配置。
+- 文件檢查格式、magic bytes、8 MiB、最多 20 份及案件歸屬；安全檢查由人工 evidence check 承接，未接外部掃毒引擎。
+- 產品、會員、RMA API 與 OCR 未串接；本版使用受控設定與人工檢核。
+- 五國正式矩陣、翻譯、時區／SLA、付款人／交付檔格式、保存政策、Google 正式授權、容量及備援演練仍需正式環境核定。可配置樣本不代表已核准營運政策。
+- GCP 目錄仍為準備模板，本次不建立或部署雲端資源。GitHub push 不代表正式環境已上線。
 
-### 活動管理
+## 文件與原型
 
-- 查看進行中與排程中的 Cashback 活動及預算使用狀況。
-- 建立或編輯活動草稿。
-- 示意設定國家、幣別、購買期間、申請截止日、時區與活動群組。
-- 預留合格產品、通路、預算及前台內容的後續設定步驟。
+- [開發計畫](docs/Implementation-Plan.md)
+- [舊站欄位對照與圖片依據](docs/Legacy-Field-Mapping.md)
+- [報表維度、公式及參考來源](docs/Reporting-Dimensions.md)
+- [Phase 1 Spec](docs/Phase1-Development-Spec.md)／[SA](docs/Gigabyte-Cashback-SA.md)
+- [開發前盤點快照](docs/Project-Status-2026-09-09.md)（僅表示實作開始前狀態）
+- [v3 原型驗收與歷史部署](docs/Prototype-v3-UAT.md)
+- [舊資料來源檢閱](docs/Cross-Region-Promotion-Source-Review.md)
 
-### Cashback 發放
-
-- 顯示待發放、處理中、當月已發放及發放失敗的案件統計。
-- 管理第三方 Reward Provider API 或 CSV 批次發放紀錄。
-- 建立發放批次並追蹤處理、部分成功與已完成狀態。
-- 集中呈現帳戶資料錯誤、Provider timeout 與金額不符等對帳例外。
-
-### 報表
-
-- 呈現申請提交、有效申請、核准與已發放的轉換漏斗。
-- 查看核准、補件及拒絕的審核結果分布。
-- 比較熱門產品的核准件數與 Cashback 金額。
-- 追蹤首次審核決策的 SLA 表現，並示意報表匯出。
-
-### 團隊與權限
-
-- 顯示管理員、審核、財務及客服等角色群組。
-- 查看成員角色、資料存取範圍與邀請狀態。
-- 呈現活動發布、案件核准與發放管理的職責分離概念。
-- 示意管理操作會保留稽核紀錄。
-
-## 原型範圍
-
-目前版本以畫面、流程與互動展示為主，使用示意資料協助確認資訊架構及操作方式。會員登入、檔案儲存、OCR、產品驗證 API、Email 通知、第三方 Cashback 發放與後台權限尚未連接正式服務，畫面中的核准、拒絕、補件及建立批次等操作不會產生真實交易。
-
-## 相關文件
-
-- [系統分析文件](docs/Gigabyte-Cashback-SA.md)
+Markdown、來源程式、migration 與 lockfiles 納入 Git；node_modules、bin／obj、測試產物、秘密與本機資料排除。原型線上歷史記錄不等於此版正式 API 部署。

@@ -1,0 +1,24 @@
+{
+  "culture": "en",
+  "texts": {
+    "Permission:Cashback": "Cashback",
+    "Permission:Foundation": "Foundation status",
+    "Permission:Foundation.Verify": "Run foundation verification",
+    "Permission:Campaigns": "View campaigns",
+    "Permission:Campaigns.Manage": "Manage campaigns",
+    "Permission:Campaigns.Publish": "Publish campaigns",
+    "Permission:Claims": "View claims",
+    "Permission:Claims.Review": "Review claims",
+    "Permission:Claims.ViewSensitive": "View sensitive claim data",
+    "Permission:Payments": "View payments",
+    "Permission:Payments.Authorize": "Authorize payments",
+    "Permission:Payments.Reconcile": "Reconcile payments",
+    "Permission:Reports": "View reports",
+    "Permission:Reports.Export": "Export reports",
+    "Permission:Audit": "View audit logs",
+    "AppName": "Cashback",
+    "Menu:Home": "Home",
+    "Welcome": "Welcome",
+    "LongWelcomeMessage": "Welcome to the application. This is a startup project based on the ABP framework. For more information, visit abp.io."
+  }
+}

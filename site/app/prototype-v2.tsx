@@ -1,0 +1,328 @@
+"use client";
+
+import { useMemo, useState } from "react";
+import {
+  MARKETS, PRODUCTS, REGISTERED_PRODUCTS, RETAILERS, TODAY, CHECKS, MEMBER_ID,
+  createState, freshDraft, money, marketName, totals, transition, claimStepErrors, can, csv,
+  type State, type Action, type Campaign, type Claim, type Draft, type Market, type Role, type Payment,
+} from "./prototype-model";
+
+type FrontView = "home" | "campaign" | "claim" | "claims" | "products" | "help";
+type AdminView = "dashboard" | "claims" | "campaigns" | "rewards" | "reports" | "audit";
+type Act = (action: Action, message?: string) => boolean;
+type Shared = { state: State; act: Act };
+const nav = [
+  { id: "dashboard", label: "Overview", icon: "⌂" }, { id: "claims", label: "Claims", icon: "▤" },
+  { id: "campaigns", label: "Campaigns", icon: "◇" }, { id: "rewards", label: "Payouts", icon: "€" },
+  { id: "reports", label: "Reports", icon: "↗" }, { id: "audit", label: "Audit & access", icon: "◉" },
+] as const;
+function Pill({ children, tone }: { children: React.ReactNode; tone?: string }) {
+  const label = String(children);
+  const color = tone ?? (/Approved|Succeeded|Open|Verified/.test(label) ? "success" : /Hold|Unknown|Failed|Rejected/.test(label) ? "danger" : /info|required|Ready|Paused/.test(label) ? "warning" : "info");
+  return <span className={"status status-" + color}><i />{children}</span>;
+}
+function Brand({ onClick, dark = false }: { onClick: () => void; dark?: boolean }) {
+  return <button onClick={onClick} className={"brand " + (dark ? "brand-dark" : "")} aria-label="GIGABYTE Cashback home"><span>GIGABYTE</span><small>CASHBACK</small></button>;
+}
+function Art({ compact = false, blue = false, amount = 11000 }: { compact?: boolean; blue?: boolean; amount?: number }) {
+  return <div className={"campaign-visual " + (compact ? "campaign-visual-compact " : "") + (blue ? "campaign-visual-blue" : "")}>
+    <span className="visual-grid" /><span className="visual-orb visual-orb-a" /><span className="visual-orb visual-orb-b" />
+    <div className="product-stack"><span className="product-chip">AORUS</span><b>{blue ? "MEMBER" : "XTREME"}</b><small>{blue ? "YOUR REGISTERED PRODUCTS" : "PERFORMANCE SERIES"}</small><div className="product-lines"><i /><i /><i /></div></div>
+    {!compact && <span className="cashback-seal">UP TO<strong>{money(amount).replace(".00", "")}</strong><small>DEMO CASHBACK</small></span>}
+  </div>;
+}
+function PageHead({ eyebrow, title, description, action }: { eyebrow: string; title: string; description: string; action?: React.ReactNode }) {
+  return <div className="admin-page-head"><div><span>{eyebrow}</span><h1>{title}</h1><p>{description}</p></div>{action}</div>;
+}
+function Empty({ title, children }: { title: string; children: React.ReactNode }) {
+  return <div className="v2-empty"><span>◇</span><h3>{title}</h3><p>{children}</p></div>;
+}
+function Download({ name, rows, children, className = "button button-secondary" }: { name: string; rows: (string | number)[][]; children: React.ReactNode; className?: string }) {
+  return <button className={className} onClick={() => {
+    const url = URL.createObjectURL(new Blob([csv(rows)], { type: "text/csv;charset=utf-8" }));
+    const a = document.createElement("a"); a.href = url; a.download = name; a.click();
+    setTimeout(() => URL.revokeObjectURL(url), 1000);
+  }}>{children}</button>;
+}
+function FrontHeader({ view, setView, market, setMarket, openAdmin }: {
+  view: FrontView; setView: (view: FrontView) => void; market: Market; setMarket: (market: Market) => void; openAdmin: () => void;
+}) {
+  return <header className="front-header"><div className="front-header-inner"><Brand onClick={() => setView("home")} />
+    <nav className="front-nav" aria-label="Main navigation">
+      {[["home", "Cashback offers"], ["products", "My products"], ["claims", "My claims"], ["help", "UAT guide"]].map(([id, label]) => <button key={id} className={view === id || (id === "home" && view === "campaign") ? "active" : ""} onClick={() => setView(id as FrontView)}>{label}</button>)}
+    </nav><div className="front-actions"><label className="v2-market-label"><span className="flag">{market}</span><select aria-label="Activity market" value={market} disabled={view === "claim"} onChange={e => setMarket(e.target.value as Market)}>{MARKETS.map(m => <option value={m.code} key={m.code}>{m.name} · EN</option>)}</select></label>
+    <button className="admin-preview" onClick={openAdmin}>Admin preview <span>→</span></button></div>
+  </div></header>;
+}
+function Home({ state, act, market, setView }: Shared & { market: Market; setView: (view: FrontView) => void }) {
+  const campaign = state.campaigns.find(c => c.id === state.activeCampaignId)!;
+  const max = campaign.products.reduce((n, p) => n + p.amount, 0);
+  return <main><section className="hero"><div className="hero-noise" /><div className="hero-content">
+    <div className="eyebrow light">GIGABYTE REWARDS · {marketName(market).toUpperCase()}</div><h1>Build more.<br /><em>Get more back.</em></h1>
+    <p>Your next upgrade, rewarded. Explore selected graphics cards, motherboards and monitors — and claim them together on one invoice.</p>
+    <div className="hero-actions"><button className="button button-primary" onClick={() => setView("campaign")}>Explore cashback <span>↗</span></button><button className="button button-ghost" onClick={() => setView("claims")}>Track a claim</button></div>
+    <div className="hero-points"><span><b>01</b> Choose products</span><span><b>02</b> One invoice</span><span><b>03</b> Track every step</span></div>
+  </div><div className="hero-art"><Art amount={max} /></div></section>
+    <div className="v2-market-strip"><span>FIVE MARKETS. ONE PROGRAMME.</span>{MARKETS.map(m => <span key={m.code} className={market === m.code ? "selected" : ""}>{m.code}<small>{m.name}</small></span>)}<b>EUR</b></div>
+    <section className="content-section offers-section"><div className="section-heading"><div><div className="eyebrow">Q1-TYPE PROGRAMME · UAT</div><h2>Your next upgrade starts here.</h2></div><p>Same visual design. A connected second-version workflow.<br />Dates, amounts and eligibility below are test fixtures.</p></div>
+      <div className="offer-grid">{state.campaigns.filter(c => c.status !== "Draft" && c.markets.includes(market)).map(c => {
+        const b = totals(state, c.id); const available = c.status === "Open" && b.remaining > 0 && b.count < c.claimCap && TODAY >= c.claimStart && TODAY <= c.claimEnd;
+        return <article className="offer-card" key={c.id}><Art compact /><div className="offer-copy"><div className="offer-meta"><span>GRAPHICS · MOTHERBOARDS · MONITORS</span><Pill>{available ? "Open · UAT" : "Not accepting claims"}</Pill></div><h3>{c.name}</h3><p>Up to {money(c.products.reduce((n, p) => n + p.amount, 0))} per claim · sample amounts</p><dl><div><dt>Purchase period</dt><dd>{c.purchaseStart} – {c.purchaseEnd}</dd></div><div><dt>Claim period</dt><dd>{c.claimStart} – {c.claimEnd}</dd></div></dl><button onClick={() => { act({ type: "selectCampaign", id: c.id }); setView("campaign"); }}>View offer <span>→</span></button></div></article>;
+      })}
+        <article className="offer-card"><Art compact blue /><div className="offer-copy"><div className="offer-meta"><span>AORUS MEMBER · PHASE 2 PREVIEW</span><Pill tone="info">Simulated</Pill></div><h3>Your products, ready to choose.</h3><p>Preview your own registered products. No company-wide member list.</p><dl><div><dt>Member integration</dt><dd>Not connected</dd></div><div><dt>Available for UAT</dt><dd>3 registered product samples</dd></div></dl><button onClick={() => setView("products")}>View my products <span>→</span></button></div></article>
+      </div>
+    </section><section className="trust-strip"><div><span className="trust-icon">✓</span><p><b>Same-invoice claims</b><small>One item per category</small></p></div><div><span className="trust-icon">◎</span><p><b>Cross-border purchases</b><small>Eligible stores across five markets</small></p></div><div><span className="trust-icon">€</span><p><b>Traceable decisions</b><small>Review, hold and payout kept separate</small></p></div></section>
+  </main>;
+}
+function Member({ state, act }: Shared) {
+  return <div className="v2-member-card"><span className="avatar">DM</span><div><b>Demo AORUS member</b><small>member.demo@example.test · {MEMBER_ID}</small><small>Identity and membership are simulated. No password or real account is used.</small></div>
+    {state.memberVerified ? <Pill>Verified · demo</Pill> : <button className="button button-dark" onClick={() => act({ type: "verify" }, "Demo membership verified. No AORUS request was made.")}>Use demo member</button>}
+  </div>;
+}
+function Products({ state, act, setView }: Shared & { setView: (view: FrontView) => void }) {
+  return <main className="content-section"><div className="section-heading"><div><div className="eyebrow">AORUS MEMBER PREVIEW</div><h2>My registered products</h2></div><Pill tone="info">Phase 2 · simulated API</Pill></div><Member state={state} act={act} />
+    <p className="v2-muted">Only the signed-in demo member’s products are shown. Registration helps fill the form; an eligible purchase and invoice are still required.</p>
+    <div className="v2-registered-grid">{REGISTERED_PRODUCTS.map((p, i) => <article className="admin-card v2-registered-card" key={p.id}><span className={"product-thumb thumb-" + (i + 1)}>{p.short}</span><small>{p.category}</small><h3>{p.name}</h3><code>{p.sn}</code><p>Registered {p.registered} · sample</p><button className="button button-secondary" onClick={() => setView("claim")}>Use in a claim →</button></article>)}</div>
+  </main>;
+}
+function CampaignPage({ state, market, setView }: { state: State; market: Market; setView: (view: FrontView) => void }) {
+  const [tab, setTab] = useState("products"), [search, setSearch] = useState("");
+  const c = state.campaigns.find(x => x.id === state.activeCampaignId)!;
+  const budget = totals(state); const available = c.status === "Open" && c.markets.includes(market) && budget.remaining > 0 && budget.count < c.claimCap && TODAY >= c.claimStart && TODAY <= c.claimEnd;
+  return <main className="campaign-page"><section className="campaign-hero"><div className="campaign-hero-copy"><button className="back-link" onClick={() => setView("home")}>← All offers</button><div className="eyebrow light">{c.name.toUpperCase()} · {marketName(market).toUpperCase()}</div><h1>Upgrade your build.<br /><em>Claim it together.</em></h1><p>{c.headline} One graphics card, one motherboard and one monitor can share a single claim and invoice. No A/B bundle bonus.</p><div className="campaign-dates"><div><small>BUY BETWEEN · SAMPLE DATES</small><b>{c.purchaseStart} – {c.purchaseEnd}</b></div><div><small>CLAIM WINDOW</small><b>{c.claimStart} – {c.claimEnd}</b></div></div>
+    <button className="button button-primary" disabled={!available} onClick={() => setView("claim")}>{available ? "Start your claim →" : "Claims currently unavailable"}</button><p className="v2-hero-caption">Wait {c.waitDays} days after purchase · v{c.version} · {available ? "Budget available" : "Paused, closed or capacity reached"}</p></div><div className="campaign-hero-art"><Art amount={c.products.reduce((n, p) => n + p.amount, 0)} /></div></section>
+    <nav className="tab-nav" aria-label="Campaign details">{[["products", "Eligible products"], ["retailers", "Retailers"], ["how", "How it works"], ["terms", "Terms & FAQs"]].map(([id, label]) => <button key={id} className={tab === id ? "active" : ""} onClick={() => { setTab(id); setSearch(""); }}>{label}</button>)}</nav>
+    <section className="content-section campaign-details"><div className="section-heading compact"><div><div className="eyebrow">TEST CONFIGURATION · NOT A LIVE OFFER</div><h2>{tab === "products" ? "Choose your reward" : tab === "retailers" ? "Shop across borders" : tab === "how" ? "From purchase to payout" : "Clear rules. No surprises."}</h2></div>{["products", "retailers"].includes(tab) && <label className="search-box"><span>⌕</span><input value={search} onChange={e => setSearch(e.target.value)} aria-label="Search eligible products or stores" placeholder={tab === "products" ? "Search a product" : "Search a store or country"} /></label>}</div>
+      {tab === "products" && <><div className="product-table"><div className="product-table-head"><span>Product</span><span>Category</span><span>Demo cashback</span><span /></div>{c.products.filter(p => (p.name + p.category).toLowerCase().includes(search.toLowerCase())).map((p, index) => <div className="product-row" key={p.id}><span className={"product-thumb thumb-" + (index + 1)}>{p.short}</span><span className="product-name"><b>{p.name}</b><small>One per category · same invoice</small></span><code>{p.category}</code><strong>{money(p.amount)}</strong><button disabled={!available} onClick={() => setView("claim")}>Claim →</button></div>)}</div><p className="v2-muted">Sample product and amount matrix for internal testing. Not an approved promotion.</p></>}
+      {tab === "retailers" && <><div className="tip-box"><b>Your market is {marketName(market)}</b><span>The purchase country can differ. Eligible stores are selected by purchase country, never by bank country.</span></div><div className="v2-retailer-grid">{RETAILERS.filter(r => (r.name + marketName(r.country)).toLowerCase().includes(search.toLowerCase())).map(r => <div key={r.id}><span className="flag">{r.country}</span><b>{r.name}</b><small>{marketName(r.country)}</small></div>)}</div></>}
+      {tab === "how" && <div className="steps-grid">{[["01", "Purchase", "Buy eligible items on one invoice during the purchase period."], ["02", "Wait & prepare", "Wait 14 calendar days. Gather the invoice and a serial photo for each item."], ["03", "Submit & review", "Choose registered products or enter them manually. Respond to any request for information."], ["04", "Track the result", "Approval, payment submission and settlement have separate states. UAT moves no money."]].map(x => <article key={x[0]}><span>{x[0]}</span><h3>{x[1]}</h3><p>{x[2]}</p></article>)}</div>}
+      {tab === "terms" && <div className="info-panel"><div><div className="eyebrow">{c.termsVersion}</div><h2>UAT terms preview</h2><p>Legal text, native translations and live payment ownership still require approval. The UAT interface remains English, matching v1.</p></div><ul>{["Five markets: Germany, France, Italy, Spain and the Netherlands. All demo amounts are EUR.", "One claim per participant and household; at most one product per category, on the same invoice.", "Membership must be checked. Product registration alone does not establish purchase eligibility.", "Marketing consent is optional. No actual offers, emails, uploads or money transfers occur in UAT.", "A replaced faulty product requires review. RMA/DOA is a hold, not an automatic rejection.", "Q1 reference: 10 working days to review and 90 days after validation for payout; these are not service commitments from this prototype."].map((x, i) => <li key={x}><span>{String(i + 1).padStart(2, "0")}</span>{x}</li>)}</ul></div>}
+    </section></main>;
+}
+function ProductInputs({ draft, setDraft, campaign }: { draft: Draft; setDraft: (d: Draft) => void; campaign: Campaign }) {
+  return <><div className="v2-registered-pick"><b>Choose from my registered products · demo</b><div>{REGISTERED_PRODUCTS.filter(p => campaign.products.some(x => x.id === p.id)).map(p => <button className="button button-secondary" key={p.id} onClick={() => {
+    const empty = draft.items.findIndex(i => i.productId === p.id);
+    if (empty >= 0) setDraft({ ...draft, items: draft.items.map((item, index) => index === empty ? { ...item, sn: p.sn } : item) });
+    else setDraft({ ...draft, items: [...draft.items, { productId: p.id, sn: p.sn, attached: false }] });
+  }}>{p.short} · Use registered SN</button>)}</div><small>Or enter a product manually. These are your own sample products, not a full member list.</small></div>
+    {draft.items.map((item, index) => <div className="v2-item-editor" key={index}><div><span className="eyebrow">PRODUCT {index + 1}</span><button className="back-link" onClick={() => setDraft({ ...draft, items: draft.items.filter((_, i) => i !== index) })}>Remove</button></div><div className="form-grid"><label>Eligible product<select aria-label={"Product " + (index + 1)} value={item.productId} onChange={e => setDraft({ ...draft, items: draft.items.map((x, i) => i === index ? { productId: e.target.value, sn: "", attached: false } : x) })}>{campaign.products.map(p => <option value={p.id} key={p.id}>{p.name}</option>)}</select></label><label>Serial number<input aria-label={"Serial " + (index + 1)} value={item.sn} placeholder="e.g. UAT-GPU-10001" onChange={e => setDraft({ ...draft, items: draft.items.map((x, i) => i === index ? { ...x, sn: e.target.value } : x) })} /></label></div><p className="v2-item-amount">{campaign.products.find(p => p.id === item.productId)?.category}<b>{money(campaign.products.find(p => p.id === item.productId)?.amount ?? 0)}</b></p></div>)}
+    <button className="button button-secondary" disabled={draft.items.length >= campaign.products.length} onClick={() => {
+      const p = campaign.products.find(p => !draft.items.some(i => i.productId === p.id));
+      if (p) setDraft({ ...draft, items: [...draft.items, { productId: p.id, sn: "", attached: false }] });
+    }}>＋ Add another product</button>
+  </>;
+}
+function ClaimForm({ state, act, market, setView }: Shared & { market: Market; setView: (view: FrontView) => void }) {
+  const [step, setStep] = useState(1), [draft, setDraft] = useState(() => freshDraft(market));
+  const [query, setQuery] = useState(""), [submitted, setSubmitted] = useState("");
+  const [errors, setErrors] = useState<string[]>([]);
+  const c = state.campaigns.find(x => x.id === state.activeCampaignId)!;
+  const amount = draft.items.reduce((n, i) => n + (c.products.find(p => p.id === i.productId)?.amount ?? 0), 0);
+  const stores = RETAILERS.filter(r => r.country === draft.purchaseCountry && r.name.toLowerCase().includes(query.toLowerCase()));
+  const next = () => {
+    const relevant = claimStepErrors(state, draft, c, step);
+    if (relevant.length) { setErrors(relevant); return; }
+    setErrors([]);
+    if (step < 4) setStep(step + 1);
+    else if (act({ type: "submit", draft }, "Demo claim created. No real email or files were sent.")) setSubmitted(market + "-UAT-" + (1001 + state.claims.length));
+  };
+  if (submitted) return <main className="claim-shell"><div className="success-card"><span className="success-mark">✓</span><div className="eyebrow">DEMO CLAIM RECEIVED</div><h1>One invoice. One claim.</h1><p>Your reference is <b>{submitted}</b>. Your {draft.items.length} product(s) now appear in both My claims and the review workspace.</p><div className="success-summary"><span>Reserved demo cashback<strong>{money(amount)}</strong></span><span>Next step<strong>Manual review</strong></span></div><button className="button button-dark" onClick={() => setView("claims")}>View my claim →</button></div></main>;
+  return <main className="claim-shell"><div className="claim-top"><button className="back-link" onClick={() => setView("campaign")}>← Back to offer</button><p>Scenario date: {TODAY}</p></div><div className="claim-layout"><aside className="claim-sidebar"><div className="eyebrow">YOUR CLAIM · UAT</div><h2>{c.name}</h2><p>{marketName(market)} · EUR · v{c.version}</p><ol>{["Member & purchase", "Products", "Documents", "Review"].map((label, i) => <li key={label} className={step === i + 1 ? "active" : step > i + 1 ? "done" : ""}><span>{step > i + 1 ? "✓" : i + 1}</span><div><b>{label}</b><small>{["Identity, date & store", "Multiple items, one invoice", "Sample proof for each item", "Confirm & reserve budget"][i]}</small></div></li>)}</ol><div className="tip-box"><b>For internal testing</b><span>Use sample files and values only. Leaving this form discards its draft; submitted cases stay in this tab until reset.</span></div></aside>
+      <section className="claim-form-card"><div className="form-heading"><span>STEP {step} OF 4</span><h1>{["Tell us about your purchase", "Build your claim", "Attach sample documents", "Review your claim"][step - 1]}</h1><p>{["Your purchase country may differ from your activity market.", "One item per category. All items must appear on the same invoice.", "These controls attach sample metadata only. They never upload real files.", "Check the total and consent before submitting the internal test case."][step - 1]}</p></div>
+        {errors.length > 0 && <div className="v2-errors" role="alert"><b>Please check these details</b><ul>{errors.map(x => <li key={x}>{x}</li>)}</ul></div>}
+        {step === 1 && <><Member state={state} act={act} /><div className="form-grid"><label>Activity / residence market<input readOnly value={marketName(market)} /></label><label>Purchase country<select value={draft.purchaseCountry} onChange={e => { setDraft({ ...draft, purchaseCountry: e.target.value as Market, retailerId: "" }); setQuery(""); }}>{MARKETS.map(m => <option key={m.code} value={m.code}>{m.name}</option>)}</select></label><label>Purchase date<input type="date" value={draft.purchaseDate} onChange={e => setDraft({ ...draft, purchaseDate: e.target.value })} /></label><label>Invoice total (EUR)<input type="number" min="0" step=".01" value={draft.invoiceAmount / 100} onChange={e => setDraft({ ...draft, invoiceAmount: Math.round(Number(e.target.value) * 100) })} /></label><label className="full">Search an eligible retailer<input value={query} placeholder="Search store, then select a result below" onChange={e => { setQuery(e.target.value); setDraft({ ...draft, retailerId: "" }); }} /></label></div>
+          <div className="v2-store-results" aria-label="Eligible retailer suggestions">{stores.map(r => <button key={r.id} aria-pressed={draft.retailerId === r.id} className={draft.retailerId === r.id ? "selected" : ""} onClick={() => setDraft({ ...draft, retailerId: r.id })}><span className="flag">{r.country}</span>{r.name}<b>{draft.retailerId === r.id ? "Selected ✓" : "Select"}</b></button>)}{stores.length === 0 && <p>No matching eligible store. Free text is not an eligible selection.</p>}</div><div className="form-grid"><label className="full">Invoice reference<input value={draft.invoice} onChange={e => setDraft({ ...draft, invoice: e.target.value })} /></label></div>
+          <div className="tip-box"><b>14-day waiting rule</b><span>On the frozen test date {TODAY}, use a purchase date on or before 13 August. The default 10 August is eligible.</span></div></>}
+        {step === 2 && <ProductInputs draft={draft} setDraft={setDraft} campaign={c} />}
+        {step === 3 && <div className="upload-grid"><button className={"upload-box " + (draft.invoiceAttached ? "uploaded" : "")} onClick={() => setDraft({ ...draft, invoiceAttached: !draft.invoiceAttached })}><span>{draft.invoiceAttached ? "✓" : "+"}</span><b>{draft.invoiceAttached ? "sample-invoice.pdf attached" : "Attach sample invoice"}</b><small>One invoice covering all claimed products</small></button>{draft.items.map((item, index) => <button key={index} className={"upload-box " + (item.attached ? "uploaded" : "")} onClick={() => setDraft({ ...draft, items: draft.items.map((x, i) => i === index ? { ...x, attached: !x.attached } : x) })}><span>{item.attached ? "✓" : "+"}</span><b>{item.attached ? "sample-serial-" + (index + 1) + ".jpg attached" : "Attach sample serial photo " + (index + 1)}</b><small>{c.products.find(p => p.id === item.productId)?.category}</small></button>)}</div>}
+        {step === 4 && <><div className="review-list"><div><span>Member</span><p><b>Demo AORUS member</b><small>Verified sample · {marketName(market)}</small></p></div><div><span>Purchase</span><p><b>{draft.purchaseDate} · {RETAILERS.find(r => r.id === draft.retailerId)?.name}</b><small>{marketName(draft.purchaseCountry)} · {draft.invoice} · {money(draft.invoiceAmount)}</small></p><button onClick={() => setStep(1)}>Edit</button></div>{draft.items.map((item, i) => <div key={i}><span>Product {i + 1}</span><p><b>{c.products.find(p => p.id === item.productId)?.name}</b><small>{item.sn} · sample serial photo attached</small></p><b>{money(c.products.find(p => p.id === item.productId)?.amount ?? 0)}</b></div>)}</div>
+          <label className="consent"><input type="checkbox" checked={draft.terms} onChange={e => setDraft({ ...draft, terms: e.target.checked })} /><span>I confirm these are sample data on one invoice and accept the UAT terms / privacy notice ({c.termsVersion}). No actual Cashback is promised.</span></label><label className="consent"><input type="checkbox" checked={draft.marketing} onChange={e => setDraft({ ...draft, marketing: e.target.checked })} /><span>Marketing preference preview (optional; no messages will be sent).</span></label></>}
+        <div className="v2-form-total"><span>{draft.items.length} products · same invoice</span><b>{money(amount)}</b></div><div className="form-footer"><button className="button button-secondary" disabled={step === 1} onClick={() => { setErrors([]); setStep(step - 1); }}>Back</button><button className="button button-dark" onClick={next}>{step === 4 ? "Submit demo claim" : "Continue"} →</button></div>
+      </section></div></main>;
+}
+function Timeline({ claim }: { claim: Claim }) {
+  return <ol className="v2-timeline">{claim.history.map((h, i) => <li key={i}><b>{h.title}</b><small>{h.at.replace("T", " ").slice(0, 16)}</small><p>{h.detail}</p></li>)}</ol>;
+}
+function MyClaims({ state, act, setView }: Shared & { setView: (view: FrontView) => void }) {
+  const mine = state.claims.filter(c => c.applicantId === MEMBER_ID);
+  return <main className="content-section"><div className="section-heading"><div><div className="eyebrow">DEMO MEMBER · YOUR CASES ONLY</div><h2>My claims</h2></div><button className="button button-dark" onClick={() => setView("claim")}>Start a claim →</button></div>
+    {!mine.length && <Empty title="Your upgrade story starts here.">Submit a sample claim, then switch to Admin preview to review it. Updates will appear here in the same tab.</Empty>}
+    {mine.map(c => <MyClaim key={c.id} claim={c} state={state} act={act} />)}
+  </main>;
+}
+function MyClaim({ claim: c, state, act }: Shared & { claim: Claim }) {
+  const [expanded, setExpanded] = useState(true), [note, setNote] = useState(""), [correction, setCorrection] = useState<Draft>(() => structuredClone(c));
+  const p = state.payments.find(x => x.claimId === c.id);
+  return <article className="admin-card v2-my-claim"><div className="card-head"><div><h2>{c.id}</h2><p>{c.items.length} products · {marketName(c.market)} · {money(c.amount)}</p></div><Pill>{c.status}</Pill><button onClick={() => setExpanded(!expanded)} aria-expanded={expanded}>{expanded ? "Hide" : "Details"} {expanded ? "−" : "+"}</button></div>
+    {expanded && <><div className="v2-state-grid"><div><small>REVIEW</small><b>{c.status}</b></div><div><small>RISK HOLD</small><b>{c.hold || "None"}</b></div><div><small>PAYMENT</small><b>{p ? (p.status === "Succeeded" ? "Paid · simulated" : p.status) : "Not prepared"}</b></div></div>
+      <p className="v2-muted">Payment status is a simulation. An email delivery event is not settlement.</p>
+      {c.status === "More info required" && <div className="v2-supplement"><h3>Provide the requested information</h3><p>{c.history.find(h => h.title === "More info required")?.detail}</p><div className="form-grid"><label>Correct purchase date<input type="date" value={correction.purchaseDate} onChange={e => setCorrection({ ...correction, purchaseDate: e.target.value })} /></label>{correction.items.map((item, i) => <label key={i}>Product {i + 1} serial<input value={item.sn} onChange={e => setCorrection({ ...correction, items: correction.items.map((x, index) => index === i ? { ...x, sn: e.target.value, attached: true } : x) })} /></label>)}</div><p>Submitting attaches a replacement sample invoice and sample serial photos. Previous values remain in the case history.</p></div>}
+      {!["Rejected", "Cancelled"].includes(c.status) && <><label className="v2-note-label">Your explanation / cancellation reason<textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Use test data only" /></label><div className="v2-inline-actions">{c.status === "More info required" && <button className="button button-dark" onClick={() => act({ type: "supplement", id: c.id, draft: { ...correction, invoiceAttached: true, items: correction.items.map(i => ({ ...i, attached: true })) }, note }, "Supplement received; manual checks were reset.")}>Submit sample supplement</button>}<button className="button button-secondary" disabled={!!p && !["Ready", "Authorized", "Failed"].includes(p.status)} onClick={() => act({ type: "cancel", id: c.id, note }, "Demo claim cancelled.")}>Cancel claim</button></div></>}
+      <h3>Case history</h3><Timeline claim={c} /></>}
+  </article>;
+}
+function Guide() {
+  return <main className="content-section"><div className="section-heading"><div><div className="eyebrow">PROTOTYPE 02 · INTERNAL ACCEPTANCE</div><h2>Test the whole journey.</h2></div><Pill>Q1-type scope</Pill></div><div className="steps-grid">{[
+    ["01", "Submit a claim", "Pick a market, use the demo member, choose an eligible store in any of the five purchase countries, and add products from one invoice."],
+    ["02", "Review & supplement", "Switch to Admin preview. Record checks, request information, add an RMA hold or approve. Your own case updates in My claims."],
+    ["03", "Simulate a payout", "Prepare a batch, authorize and submit. Test email delivery, unknown results, reconciliation and confirmed-failure retry. No money moves."],
+    ["04", "Inspect the evidence", "Compare budget, product and case counts, download sample CSVs and inspect audit / notification records. Refresh or Reset demo to start again."],
+  ].map(x => <article key={x[0]}><span>{x[0]}</span><h3>{x[1]}</h3><p>{x[2]}</p></article>)}</div><div className="v2-guide-grid">{[
+    ["What is connected?", "Only the prototype screens share state in this tab. AORUS, registered-product APIs, SN/RMA APIs, email, file storage and Tremendous are not connected."],
+    ["What can I enter?", "Synthetic values only. There are no actual upload controls or bank-account fields. All attachment actions use sample metadata."],
+    ["What is approved?", "Q1-type rules, Germany / France / Italy / Spain / Netherlands, internal UAT, and the member’s own registered products. English UI is retained from v1; native translations remain pending."],
+    ["What is still pending?", "Production eligibility / amount matrices, native terms, partial-item decisions, payment provider and operations ownership. Sample dates are August–September 2026 with a frozen 27 August test clock."],
+  ].map(([q, a]) => <details key={q} open><summary>{q}</summary><p>{a}</p></details>)}</div></main>;
+}
+
+function Metrics({ state }: { state: State }) {
+  const b = totals(state), claims = state.claims.filter(c => c.campaignId === state.activeCampaignId);
+  const metrics = [
+    ["CLAIMS RECEIVED", String(claims.length), claims.reduce((n, c) => n + c.items.length, 0) + " product items"],
+    ["AWAITING REVIEW", String(claims.filter(c => ["Submitted", "Under review", "More info required"].includes(c.status)).length), claims.filter(c => !!c.hold).length + " on hold"],
+    ["APPROVED · UNPAID", money(b.approved), "Includes failed and unknown payouts"],
+    ["PAID · SIMULATED", money(b.paid), "Reconciled demo evidence only"],
+  ];
+  return <div className="metric-grid">{metrics.map((m, i) => <article key={m[0]}><div><small>{m[0]}</small><span className={"metric-icon mi-" + i}>{["▤", "◷", "✓", "€"][i]}</span></div><strong>{m[1]}</strong><p>{m[2]}</p></article>)}</div>;
+}
+function Budget({ state, campaignId = state.activeCampaignId }: { state: State; campaignId?: string }) {
+  const c = state.campaigns.find(x => x.id === campaignId)!; const b = totals(state, campaignId);
+  return <section className="admin-card v2-budget"><div className="card-head"><div><h2>Budget control</h2><p>{c.name} · EUR · live demo ledger</p></div><Pill>{b.remaining > 0 && b.count < c.claimCap ? "Capacity available" : "Intake stopped"}</Pill></div><div className="budget-bar"><div><span>Committed + buffer</span><b>{money(b.used + c.buffer)} / {money(c.budget)}</b></div><i><b style={{ width: Math.min(100, (b.used + c.buffer) / c.budget * 100) + "%" }} /></i></div><div className="v2-budget-grid">{[["Reserved", b.reserved], ["Approved unpaid", b.approved], ["Paid", b.paid], ["Buffer", c.buffer], ["Available", b.remaining]].map(([label, value]) => <div key={label}><small>{label}</small><b>{money(Number(value))}</b></div>)}</div><p className="v2-muted">Available = budget − buffer − reserved − approved unpaid − paid. {b.count} / {c.claimCap} active claims. Payment failures do not release commitments.</p></section>;
+}
+function Dashboard({ state, setView }: { state: State; setView: (v: AdminView) => void }) {
+  const claims = state.claims.filter(c => c.campaignId === state.activeCampaignId);
+  return <main className="admin-content"><PageHead eyebrow={"INTERNAL UAT · " + TODAY} title="Programme overview" description="Five markets. One reusable campaign. Every change connected." action={<button className="button button-admin" onClick={() => setView("campaigns")}>Manage campaign →</button>} /><Metrics state={state} />
+    <div className="dashboard-grid"><section className="admin-card"><div className="card-head"><div><h2>Five-market activity</h2><p>Actual case counts in this demo, not forecast volumes</p></div></div><div className="v2-market-bars">{MARKETS.map(m => {
+      const rows = claims.filter(c => c.market === m.code), max = Math.max(1, ...MARKETS.map(x => claims.filter(c => c.market === x.code).length));
+      return <div key={m.code}><span className="flag">{m.code}</span><b>{m.name}</b><i><span style={{ width: rows.length / max * 100 + "%" }} /></i><strong>{rows.length}</strong></div>;
+    })}</div></section><section className="admin-card review-queue"><div className="card-head"><div><h2>Review queue</h2><p>Pending decisions and information requests</p></div><button onClick={() => setView("claims")}>View all →</button></div>{claims.filter(c => !["Approved", "Rejected", "Cancelled"].includes(c.status)).slice(0, 4).map(c => <button className="v2-queue-button" key={c.id} onClick={() => setView("claims")}><span className="avatar">{c.market}</span><p><b>{c.applicant}</b><small>{c.id} · {c.items.length} products</small></p><Pill>{c.hold ? "On hold" : c.status}</Pill></button>)}</section>
+      <Budget state={state} /><section className="admin-card attention-card"><div className="card-head"><div><h2>Needs attention</h2><p>Resolve exceptions before authorizing payment</p></div></div>{[
+        [state.claims.filter(c => c.hold).length + " risk holds", "RMA / DOA requires human review", "claims"],
+        [state.payments.filter(p => p.status === "Unknown").length + " unknown payment results", "Reconcile first — do not send again", "rewards"],
+        [state.notifications.length + " simulated notifications", "Inspect the outbox and audit trail", "audit"],
+      ].map(([title, detail, view]) => <button key={title} onClick={() => setView(view as AdminView)}><span className="attention-dot warning">!</span><p><b>{title}</b><small>{detail}</small></p><i>→</i></button>)}</section>
+    </div>
+  </main>;
+}
+function claimExport(claims: Claim[]) {
+  return [["UAT_ONLY", "Campaign", "Version", "Claim", "Market", "Purchase country", "Retailer", "Products", "Amount EUR", "Review", "Hold"],
+    ...claims.map(c => ["SIMULATED", c.campaignId, c.snapshot.version, c.id, c.market, c.purchaseCountry, RETAILERS.find(r => r.id === c.retailerId)?.name ?? c.retailerId, c.items.length, c.amount / 100, c.status, c.hold])];
+}
+function ClaimReview({ state, act, search }: Shared & { search: string }) {
+  const [filter, setFilter] = useState("All"), [country, setCountry] = useState("All"), [selected, setSelected] = useState(state.claims[0]?.id);
+  const filtered = state.claims.filter(c => (filter === "All" || (filter === "On hold" ? !!c.hold : c.status === filter)) && (country === "All" || c.market === country) &&
+    (c.id + " " + c.applicant + " " + c.invoice + " " + c.retailerId + " " + c.items.map(i => i.sn + " " + c.snapshot.products.find(p => p.id === i.productId)?.name).join(" ")).toLowerCase().includes(search.toLowerCase()));
+  const current = filtered.find(c => c.id === selected) ?? filtered[0];
+  return <main className="admin-content"><PageHead eyebrow="OPERATIONS" title="Claims" description="Manual checks, same-invoice products and a complete decision trail." action={<Download name="uat-claims.csv" rows={claimExport(filtered)}>Export filtered ↓</Download>} />
+    <div className="filter-row"><div className="filter-tabs">{["All", "Under review", "More info required", "Approved", "On hold"].map(f => <button key={f} className={filter === f ? "active" : ""} onClick={() => setFilter(f)}>{f}</button>)}</div><select aria-label="Filter claims by market" value={country} onChange={e => setCountry(e.target.value)}><option value="All">All five markets</option>{MARKETS.map(m => <option key={m.code} value={m.code}>{m.name}</option>)}</select></div>
+    <section className="claims-workspace v2-claims-workspace"><div className="claims-table"><div className="claims-table-head"><span>Claim</span><span>Applicant</span><span>Products</span><span>Amount</span><span>Status</span></div>{filtered.map(c => <button key={c.id} className={current?.id === c.id ? "active" : ""} onClick={() => setSelected(c.id)}><span><b>{c.id}</b><small>{c.createdAt} · v{c.snapshot.version}</small></span><span><b>{c.applicant}</b><small>{marketName(c.market)}</small></span><span><b>{c.items.length} item(s)</b><small>{c.snapshot.products.filter(p => c.items.some(i => i.productId === p.id)).map(p => p.short).join(" + ")}</small></span><strong>{money(c.amount)}</strong><Pill>{c.hold ? "On hold" : c.status}</Pill></button>)}{!filtered.length && <Empty title="No matching cases">Try another status, market or search.</Empty>}</div>
+      {current && <ReviewDrawer key={current.id} claim={current} state={state} act={act} />}
+    </section>
+  </main>;
+}
+function ReviewDrawer({ claim: c, state, act }: Shared & { claim: Claim }) {
+  const [note, setNote] = useState(""), [showHistory, setShowHistory] = useState(false);
+  const readonly = !can(state, "review") || ["Approved", "Rejected", "Cancelled"].includes(c.status);
+  const payment = state.payments.find(p => p.claimId === c.id);
+  return <aside className="review-drawer"><div className="drawer-head"><div><small>CLAIM {c.id}</small><h2>{c.applicant}</h2></div><Pill>{c.status}</Pill></div>
+    {c.hold && <div className="v2-errors"><b>Risk hold · blocks approval and new payout</b><p>{c.hold}</p></div>}
+    <div className="validation-block"><h3>Manual checks <span>{CHECKS.filter(k => c.checks[k]).length} / {CHECKS.length}</span></h3><p className="v2-muted">SN / RMA APIs and OCR are not connected.</p>{CHECKS.map(key => <label className="v2-check" key={key}><input type="checkbox" checked={!!c.checks[key]} disabled={readonly} onChange={e => act({ type: "checks", id: c.id, key, checked: e.target.checked })} /><span>{key}</span></label>)}</div>
+    <div className="document-review"><div><h3>Sample documents</h3><Pill tone="neutral">No real files</Pill></div><div className="document-preview"><span className="invoice-paper"><b>{RETAILERS.find(r => r.id === c.retailerId)?.name}</b><i /><i /><i /><strong>TOTAL {money(c.invoiceAmount)}</strong></span><small>{c.invoice} · SAMPLE INVOICE</small></div></div>
+    <div className="claim-facts"><div><span>Residence / activity</span><b>{marketName(c.market)}</b></div><div><span>Purchase</span><b>{marketName(c.purchaseCountry)} · {c.purchaseDate}</b></div><div><span>Rules snapshot</span><b>v{c.snapshot.version} · {c.snapshot.termsVersion}</b></div>{c.items.map((i, index) => <div key={index}><span>{c.snapshot.products.find(p => p.id === i.productId)?.category}</span><b>{c.snapshot.products.find(p => p.id === i.productId)?.name}<small className="v2-block">{i.sn} · {i.attached ? "sample photo attached" : "photo missing"}</small></b></div>)}<div><span>Total cashback</span><b>{money(c.amount)}</b></div><div><span>Payment</span><b>{payment?.status ?? "Not prepared"}</b></div></div>
+    <label className="v2-note-label">Decision / support note<textarea value={note} onChange={e => setNote(e.target.value)} placeholder="Required for decisions and hold changes" /></label>
+    <div className="drawer-actions"><button className="button button-secondary" disabled={!can(state, "review")} onClick={() => act({ type: "review", id: c.id, status: "More info required", note }, "Information requested. Open My claims for your own case to respond.")}>Request info</button><button className="button button-danger" disabled={!can(state, "review")} onClick={() => act({ type: "review", id: c.id, status: "Rejected", note }, "Case rejected; its budget is released when safe.")}>Reject</button><button className="button button-approve" disabled={!can(state, "review") || !!c.hold || !CHECKS.every(k => c.checks[k])} onClick={() => act({ type: "review", id: c.id, status: "Approved", note }, "Case approved. Payment remains a separate step.")}>Approve ✓</button></div>
+    <div className="v2-inline-actions"><button className="button button-secondary" disabled={!can(state, "review")} onClick={() => act({ type: "hold", id: c.id, hold: !c.hold, note }, c.hold ? "Hold cleared with a recorded reason." : "Risk hold added. New approval and payment are blocked.")}>{c.hold ? "Clear hold" : "Add RMA / DOA hold"}</button><button className="button button-secondary" disabled={!can(state, "support")} onClick={() => act({ type: "message", id: c.id, note }, "Support message added to the simulated outbox.")}>Demo message</button></div>
+    <p className="v2-muted">One final amount per claim. Partial-item approval is not enabled until its policy is agreed.</p>
+    <button className="back-link" onClick={() => setShowHistory(!showHistory)} aria-expanded={showHistory}>{showHistory ? "Hide" : "View"} case history ({c.history.length})</button>{showHistory && <Timeline claim={c} />}
+  </aside>;
+}
+function Campaigns({ state, act }: Shared) {
+  const [editing, setEditing] = useState<Campaign | null>(null);
+  return <main className="admin-content"><PageHead eyebrow="REUSABLE CONFIGURATION" title="Campaigns" description="Copy the programme, change its settings and publish a new UAT version." action={<button className="button button-admin" disabled={!can(state, "campaign")} onClick={() => act({ type: "copyCampaign", id: state.activeCampaignId }, "A fresh campaign draft has been copied.")}>Copy active campaign ＋</button>} />
+    <div className="campaign-admin-grid">{state.campaigns.map(c => {
+      const b = totals(state, c.id);
+      return <article className="campaign-admin-card" key={c.id}><div className={"campaign-admin-visual " + (c.status === "Draft" ? "blue" : "")}><span>{c.status.toUpperCase()} · v{c.version}</span><b>AORUS</b><small>Q1-TYPE CASHBACK · UAT</small></div><div className="campaign-admin-copy"><div><Pill>{c.status}</Pill><span>{state.activeCampaignId === c.id ? "Active preview" : ""}</span></div><h2>{c.name}</h2><p>{c.markets.join(" · ")} · EUR</p><div className="campaign-progress"><span><b>{b.count}</b><small>Active claims</small></span><span><b>{money(b.used)}</b><small>Committed</small></span><span><b>{money(c.budget)}</b><small>Budget</small></span></div><i><b style={{ width: Math.min(100, b.used / c.budget * 100) + "%" }} /></i></div><footer><button disabled={!can(state, "campaign")} onClick={() => setEditing(structuredClone(c))}>Edit configuration</button><button onClick={() => act({ type: "selectCampaign", id: c.id }, "Active campaign preview changed.")}>Select preview →</button></footer></article>;
+    })}</div><Budget state={state} />
+    {editing && <CampaignEditor state={state} act={act} draft={editing} setDraft={setEditing} close={() => setEditing(null)} />}
+  </main>;
+}
+function CampaignEditor({ state, act, draft, setDraft, close }: Shared & { draft: Campaign; setDraft: (c: Campaign) => void; close: () => void }) {
+  const [tab, setTab] = useState("Basics"), [note, setNote] = useState("");
+  const patch = (value: Partial<Campaign>) => setDraft({ ...draft, ...value });
+  return <div className="modal-backdrop" onClick={e => { if (e.target === e.currentTarget) close(); }}><section className="campaign-modal v2-modal" role="dialog" aria-modal="true" aria-labelledby="campaign-title" onKeyDown={e => { if (e.key === "Escape") close(); }}><header><div><span>UAT CONFIGURATION · VERSION {draft.version}</span><h2 id="campaign-title">Campaign setup</h2></div><button onClick={close} aria-label="Close campaign setup">×</button></header><nav>{["Basics", "Eligibility", "Budget", "Content"].map(t => <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>{t}</button>)}</nav>
+    <div className="modal-form">{tab === "Basics" && <><label>Campaign name<input autoFocus value={draft.name} onChange={e => patch({ name: e.target.value })} /></label><div><label>Status<select value={draft.status} onChange={e => patch({ status: e.target.value as Campaign["status"] })}>{["Draft", "Open", "Paused", "Closed"].map(s => <option key={s}>{s}</option>)}</select></label><label>Currency<input readOnly value="EUR · all five UAT markets" /></label></div><div>{(["purchaseStart", "purchaseEnd", "claimStart", "claimEnd"] as const).map(key => <label key={key}>{({ purchaseStart: "Purchase starts", purchaseEnd: "Purchase ends", claimStart: "Claims open", claimEnd: "Claims close" })[key]}<input type="date" value={draft[key]} onChange={e => patch({ [key]: e.target.value })} /></label>)}</div><fieldset><legend>Enabled markets</legend>{MARKETS.map(m => <label className="v2-check" key={m.code}><input type="checkbox" checked={draft.markets.includes(m.code)} onChange={e => patch({ markets: e.target.checked ? [...draft.markets, m.code] : draft.markets.filter(x => x !== m.code) })} />{m.name}</label>)}</fieldset></>}
+      {tab === "Eligibility" && <><p>Q1-type only: same invoice, one item per category, one claim per participant / household. No A/B bonus.</p>{draft.products.map(p => <label key={p.id}>{p.name} · sample cashback EUR<input type="number" min="1" step=".01" value={p.amount / 100} onChange={e => patch({ products: draft.products.map(x => x.id === p.id ? { ...x, amount: Math.round(Number(e.target.value) * 100) } : x) })} /></label>)}<label>Waiting period (calendar days)<input type="number" value={draft.waitDays} onChange={e => patch({ waitDays: Number(e.target.value) })} /></label><p>Cross-border retailer selection uses the approved UAT sample list. Production catalogue import is not connected.</p></>}
+      {tab === "Budget" && <>{(["budget", "buffer", "claimCap"] as const).map(key => <label key={key}>{({ budget: "Total cashback budget (EUR)", buffer: "Safety buffer (EUR)", claimCap: "Maximum active claims" })[key]}<input type="number" min="0" step={key === "claimCap" ? "1" : ".01"} value={draft[key] / (key === "claimCap" ? 1 : 100)} onChange={e => patch({ [key]: Math.round(Number(e.target.value) * (key === "claimCap" ? 1 : 100)) })} /></label>)}<p>Existing commitments: {money(totals(state, draft.id).used)}. The new budget cannot be lower than commitments plus buffer. Intake stops when available capacity is exhausted.</p></>}
+      {tab === "Content" && <><label>Campaign message<input value={draft.headline} onChange={e => patch({ headline: e.target.value })} /></label><label>Terms version<input value={draft.termsVersion} onChange={e => patch({ termsVersion: e.target.value })} /></label><p>English UAT copy retains v1’s design. Approved native terms, image assets and email templates are future configuration inputs.</p></>}
+      <label>Change reason<input value={note} onChange={e => setNote(e.target.value)} placeholder="Required for version history" /></label></div><footer><button className="button button-secondary" onClick={close}>Cancel</button><button className="button button-admin" onClick={() => { if (act({ type: "saveCampaign", campaign: draft, note }, "Campaign version saved. Existing claims retain their rules snapshot.")) close(); }}>Save UAT version →</button></footer>
+  </section></div>;
+}
+function Payments({ state, act }: Shared) {
+  const [selected, setSelected] = useState(state.payments[0]?.id);
+  const p = state.payments.find(x => x.id === selected) ?? state.payments[0];
+  const rows = [["UAT_ONLY", "Instruction ID", "Batch", "Claim", "Amount EUR", "Status", "Attempts", "Evidence"], ...state.payments.map(p => ["SIMULATED_NO_BANK_DATA", p.id, p.batchId, p.claimId, p.amount / 100, p.status, p.attempts, p.evidence])];
+  return <main className="admin-content"><PageHead eyebrow="FINANCE · NO REAL PAYMENTS" title="Payouts & reconciliation" description="A stable payment instruction. Separate delivery and settlement. No silent retries." action={<div className="head-actions"><Download name="uat-payment-instructions.csv" rows={rows}>Export demo CSV ↓</Download><button className="button button-admin" disabled={!can(state, "finance")} onClick={() => act({ type: "batch" }, "Demo batch prepared. Exporting does not send or pay anything.")}>Prepare demo batch ＋</button></div>} />
+    <div className="reward-metrics">{[["READY / AUTHORIZED", ["Ready", "Authorized"]], ["IN FLIGHT / UNKNOWN", ["Submitted", "Processing", "Unknown"]], ["PAID · SIMULATED", ["Succeeded"]], ["CONFIRMED FAILURE", ["Failed"]]].map(([title, statuses]) => {
+      const list = state.payments.filter(p => statuses.includes(p.status)); return <article key={String(title)}><small>{title}</small><b>{list.length}</b><span>{money(list.reduce((n, p) => n + p.amount, 0))}</span></article>;
+    })}</div><div className="v2-payment-layout"><section className="admin-card reward-table-card"><div className="card-head"><div><h2>Payment instructions</h2><p>Tremendous / bank integration not connected</p></div></div><div className="v2-payment-table">{state.payments.map(row => <button key={row.id} className={p?.id === row.id ? "selected" : ""} onClick={() => setSelected(row.id)}><span><b>{row.id}</b><small>{row.batchId} · attempt {row.attempts}</small></span><strong>{money(row.amount)}</strong><Pill>{row.status === "Succeeded" ? "Succeeded · demo" : row.status}</Pill></button>)}</div></section>{p && <PaymentDetails key={p.id} payment={p} state={state} act={act} />}</div>
+    <div className="reconciliation-strip"><span className="attention-dot warning">!</span><div><b>CSV is not a payment service.</b><p>Production still requires an approved payer, funding, country / currency coverage and evidence of settlement. UAT cannot create a real payment.</p></div></div>
+  </main>;
+}
+function PaymentDetails({ payment: p, state, act }: Shared & { payment: Payment }) {
+  const [evidence, setEvidence] = useState("");
+  const c = state.claims.find(c => c.id === p.claimId)!;
+  const permitted = can(state, "finance");
+  const operation = (op: Extract<Action, { type: "pay" }>["operation"]) => act({ type: "pay", id: p.id, operation: op, evidence }, "Demo payment state updated. No external request or transfer occurred.");
+  return <section className="admin-card v2-payment-detail"><div className="card-head"><div><h2>{money(p.amount)}</h2><p>{p.id}</p></div><Pill>{p.status}</Pill></div><div className="claim-facts"><div><span>Claim review</span><b>{c.status}</b></div><div><span>Risk hold</span><b>{c.hold || "None"}</b></div><div><span>Delivery</span><b>{p.delivery}</b></div><div><span>Attempt count</span><b>{p.attempts}</b></div><div><span>Evidence</span><b>{p.evidence || "Not reconciled"}</b></div></div><p className="v2-muted">{p.lastResult}</p>
+    <div className="v2-inline-actions"><button className="button button-dark" disabled={!permitted || p.status !== "Ready" || !!c.hold || c.status !== "Approved"} onClick={() => operation("authorize")}>Authorize</button><button className="button button-secondary" disabled={!permitted || p.status !== "Authorized" || !!c.hold || c.status !== "Approved"} onClick={() => operation("send")}>Simulate submit</button><button className="button button-secondary" disabled={!permitted || !p.attempts} onClick={() => operation("delivered")}>Simulate email delivered</button><button className="button button-secondary" disabled={!permitted || !["Submitted", "Processing"].includes(p.status)} onClick={() => operation("unknown")}>Simulate timeout</button></div>
+    {p.status === "Unknown" && <div className="v2-errors"><b>Result unknown — retry blocked</b><p>First reconcile whether the original instruction succeeded or failed. Keep the same logical instruction ID.</p></div>}
+    <label className="v2-note-label">Demo reconciliation evidence<input value={evidence} onChange={e => setEvidence(e.target.value)} placeholder="e.g. UAT-BANK-REF-002" /></label><div className="v2-inline-actions"><button className="button button-approve" disabled={!permitted || !["Submitted", "Processing", "Unknown"].includes(p.status)} onClick={() => operation("paid")}>Confirm simulated paid</button><button className="button button-danger" disabled={!permitted || !["Submitted", "Processing", "Unknown"].includes(p.status)} onClick={() => operation("failed")}>Confirm failure</button><button className="button button-secondary" disabled={!permitted || p.status !== "Failed" || !!c.hold} onClick={() => operation("retry")}>Authorize safe retry</button></div><p className="v2-muted">Email delivered ≠ paid. Exporting again does not create a new instruction.</p>
+  </section>;
+}
+function Reports({ state }: { state: State }) {
+  const [market, setMarket] = useState("All");
+  const claims = state.claims.filter(c => market === "All" || c.market === market);
+  const productRows = PRODUCTS.map(p => ({ ...p, count: claims.reduce((n, c) => n + c.items.filter(i => i.productId === p.id).length, 0),
+    approved: claims.filter(c => c.status === "Approved").reduce((n, c) => n + c.items.filter(i => i.productId === p.id).reduce(n => n + (c.snapshot.products.find(x => x.id === p.id)?.amount ?? 0), 0), 0) }));
+  return <main className="admin-content"><PageHead eyebrow="INSIGHTS · SYNTHETIC DATA" title="Reports" description="Case counts, product counts and money are kept distinct." action={<div className="head-actions"><select aria-label="Report market" value={market} onChange={e => setMarket(e.target.value)}><option value="All">All markets</option>{MARKETS.map(m => <option key={m.code} value={m.code}>{m.name}</option>)}</select><Download name="uat-report.csv" rows={claimExport(claims)}>Export report ↓</Download></div>} />
+    <div className="report-grid"><section className="admin-card report-wide"><div className="card-head"><div><h2>Case distribution</h2><p>{claims.length} claims · {claims.reduce((n, c) => n + c.items.length, 0)} product items</p></div></div><div className="v2-distribution">{["Submitted", "Under review", "More info required", "Approved", "Rejected", "Cancelled"].map(s => <div key={s}><span>{s}</span><i><b style={{ width: claims.filter(c => c.status === s).length / Math.max(1, claims.length) * 100 + "%" }} /></i><strong>{claims.filter(c => c.status === s).length}</strong></div>)}</div></section><section className="admin-card"><div className="card-head"><div><h2>Integration readiness</h2><p>UAT scope is not a production launch</p></div></div><div className="v2-readiness">{["AORUS SSO · Phase 2", "Registered products · Phase 2", "SN / RMA APIs · Phase 2", "Tremendous · Phase 3", "Email & files · not connected"].map(x => <p key={x}><span>{x}</span><Pill tone="neutral">Mock</Pill></p>)}</div></section>
+      <section className="admin-card report-wide"><div className="card-head"><div><h2>Product breakdown</h2><p>Approved value uses each claim’s original amount snapshot</p></div></div><div className="rank-list">{productRows.map((p, i) => <div key={p.id}><span>{i + 1}</span><p><b>{p.name}</b><small>{p.count} product items</small></p><strong>{money(p.approved)}</strong></div>)}</div></section><section className="admin-card"><div className="card-head"><div><h2>Serial export</h2><p>For controlled manual RMA / DOA lookup</p></div></div><div className="v2-readiness"><p>Export only sample serials. Validation results must be recorded back on the claim.</p><Download name="uat-serials.csv" rows={[["UAT_ONLY", "Claim", "Product", "SN", "Hold"], ...claims.flatMap(c => c.items.map(i => ["SIMULATED", c.id, i.productId, i.sn, c.hold]))]}>Export sample SN list ↓</Download></div></section>
+    </div>
+  </main>;
+}
+function Audit({ state }: { state: State }) {
+  const [tab, setTab] = useState("Audit trail");
+  return <main className="admin-content"><PageHead eyebrow="ACCESS & TRACEABILITY" title="Audit & access" description="Inspect who did what, the decision reason and the simulated customer notification." action={<Download name="uat-audit.csv" rows={[["At", "Actor role", "Action", "Target", "Detail"], ...state.audit.map(a => [a.at, a.role, a.action, a.target, a.detail])]}>Export audit ↓</Download>} />
+    <div className="security-note"><span>◈</span><p><b>Role switching is a UAT simulation, not authentication.</b><small>Programme admin configures campaigns, Reviewer handles decisions, Finance handles payouts, and Support sends case messages. Production RBAC / MFA remains a separate deliverable.</small></p></div><div className="filter-tabs v2-audit-tabs">{["Audit trail", "Notification outbox", "Role policy"].map(t => <button key={t} className={tab === t ? "active" : ""} onClick={() => setTab(t)}>{t}</button>)}</div>
+    {tab === "Audit trail" && <section className="admin-card v2-audit-list">{state.audit.map(a => <article key={a.id}><span>{a.at.replace("T", " ").slice(0, 19)}</span><div><b>{a.action}</b><small>{a.target} · {a.role}</small><p>{a.detail}</p></div></article>)}</section>}
+    {tab === "Notification outbox" && <section className="admin-card v2-audit-list">{state.notifications.length ? state.notifications.map((n, i) => <article key={i}><Pill tone="neutral">Not sent · demo</Pill><div><b>{n.subject}</b><small>{n.claimId} · {n.at.slice(0, 16)}</small><p>{n.detail}</p></div></article>) : <Empty title="No demo notifications yet">Submit a claim or record a review decision to populate this outbox. No actual email will be sent.</Empty>}</section>}
+    {tab === "Role policy" && <section className="admin-card v2-role-table"><table><thead><tr><th>Demo role</th><th>Campaigns</th><th>Review / hold</th><th>Payout</th><th>Support</th></tr></thead><tbody>{(["Programme admin", "Reviewer", "Finance", "Support"] as Role[]).map(role => <tr key={role}><th>{role}</th>{(["campaign", "review", "finance", "support"] as const).map(area => <td key={area}>{can({ ...state, role }, area) ? "Allowed" : "Read only"}</td>)}</tr>)}</tbody></table><p className="v2-muted">Only synthetic records are visible. Field-level masking and real user / market authorization are not claimed as implemented.</p></section>}
+  </main>;
+}
+function Admin({ state, act, close }: Shared & { close: () => void }) {
+  const [view, setView] = useState<AdminView>("dashboard"), [search, setSearch] = useState("");
+  return <div className="admin-shell"><aside className="admin-sidebar"><Brand dark onClick={() => setView("dashboard")} /><div className="workspace-switch"><span>EU</span><p><b>Five-market workspace</b><small>DE · FR · IT · ES · NL / EUR</small></p></div><nav>{nav.map(n => <button key={n.id} className={view === n.id ? "active" : ""} onClick={() => setView(n.id)}><span>{n.icon}</span>{n.label}{n.id === "claims" && <em>{state.claims.filter(c => ["Submitted", "Under review", "More info required"].includes(c.status)).length}</em>}</button>)}</nav><div className="admin-sidebar-bottom"><button onClick={close}><span>↗</span>View consumer site</button><label className="v2-role-switch">SIMULATE ROLE<select value={state.role} onChange={e => act({ type: "role", role: e.target.value as Role }, "Demo role changed. This is not production authentication.")}>{["Programme admin", "Reviewer", "Finance", "Support"].map(r => <option key={r}>{r}</option>)}</select></label><div className="admin-user"><span>UAT</span><p><b>Internal acceptance</b><small>No live customer data</small></p></div></div></aside>
+    <div className="admin-main"><header className="admin-topbar"><label><span>⌕</span><input aria-label="Search claims" placeholder="Search claims, serials, invoices…" value={search} onChange={e => { setSearch(e.target.value); setView("claims"); }} /></label><div><span className="env-badge">PROTOTYPE 02 · UAT</span></div></header>
+      {view === "dashboard" && <Dashboard state={state} setView={setView} />}{view === "claims" && <ClaimReview state={state} act={act} search={search} />}{view === "campaigns" && <Campaigns state={state} act={act} />}{view === "rewards" && <Payments state={state} act={act} />}{view === "reports" && <Reports state={state} />}{view === "audit" && <Audit state={state} />}
+    </div>
+  </div>;
+}
+export function CashbackPrototypeV2() {
+  const [state, setState] = useState(createState), [mode, setMode] = useState<"front" | "admin">("front");
+  const [view, setView] = useState<FrontView>("home"), [market, setMarket] = useState<Market>("DE");
+  const [notice, setNotice] = useState(""), [error, setError] = useState(""), [resetting, setResetting] = useState(false);
+  const appClass = useMemo(() => "prototype v2 " + (mode === "admin" ? "prototype-admin" : ""), [mode]);
+  const act: Act = (action, message = "") => {
+    try { const next = transition(state, action); setState(next); setError(""); if (message) setNotice(message); return true; }
+    catch (e) { setError(e instanceof Error ? e.message : "Unable to update this demo."); return false; }
+  };
+  return <div className={appClass}><div className="v2-uat-banner"><span><b>PROTOTYPE 02</b> Internal acceptance only · sample data · no real emails, uploads or payments</span><button onClick={() => setResetting(true)}>Reset demo ↻</button></div>
+    {mode === "front" ? <><FrontHeader view={view} setView={setView} market={market} setMarket={setMarket} openAdmin={() => setMode("admin")} />
+      {view === "home" && <Home state={state} act={act} market={market} setView={setView} />}{view === "campaign" && <CampaignPage state={state} market={market} setView={setView} />}{view === "products" && <Products state={state} act={act} setView={setView} />}{view === "claim" && <ClaimForm key={market + state.activeCampaignId} state={state} act={act} market={market} setView={setView} />}{view === "claims" && <MyClaims state={state} act={act} setView={setView} />}{view === "help" && <Guide />}
+      <footer className="v2-footer"><b>GIGABYTE CASHBACK</b><span>Q1-type · Five-market UAT · English prototype</span><small>Changes remain in this tab only. Refresh resets the demo. All dates / amounts are fixtures.</small></footer></> : <Admin state={state} act={act} close={() => setMode("front")} />}
+    {(notice || error) && <div className={"v2-notice " + (error ? "error" : "")} role={error ? "alert" : "status"}><span>{error ? "!" : "✓"}</span><p>{error || notice}</p><button aria-label="Dismiss message" onClick={() => { setNotice(""); setError(""); }}>×</button></div>}
+    {resetting && <div className="modal-backdrop"><section className="v2-reset-dialog" role="dialog" aria-modal="true" aria-labelledby="reset-title"><h2 id="reset-title">Reset this demo?</h2><p>This discards this tab’s test claims, decisions and payment simulations and restores the sample data.</p><div className="v2-inline-actions"><button className="button button-secondary" onClick={() => setResetting(false)}>Keep testing</button><button className="button button-dark" onClick={() => { setState(createState()); setMode("front"); setView("home"); setMarket("DE"); setNotice(""); setError(""); setResetting(false); }}>Reset sample data</button></div></section></div>}
+  </div>;
+}
+
+export { CampaignPage, ClaimForm, ProductInputs, MyClaims, ClaimReview, Payments, Campaigns, Reports, Audit };

@@ -1,0 +1,58 @@
+apiVersion: serving.knative.dev/v1
+kind: Service
+metadata:
+  name: gigabyte-cashback-api
+  annotations:
+    run.googleapis.com/ingress: internal-and-cloud-load-balancing
+spec:
+  template:
+    metadata:
+      annotations:
+        autoscaling.knative.dev/minScale: "0"
+        autoscaling.knative.dev/maxScale: "10"
+        run.googleapis.com/cloudsql-instances: side-project-platform:asia-east1:gigabyte-cashback
+        run.googleapis.com/secrets: REPLACE_DB_SECRET:projects/REPLACE_PROJECT_NUMBER/secrets/gigabyte-cashback-db-connection,REPLACE_ENCRYPTION_SECRET:projects/REPLACE_PROJECT_NUMBER/secrets/gigabyte-cashback-string-encryption
+    spec:
+      serviceAccountName: gigabyte-cashback-runtime@side-project-platform.iam.gserviceaccount.com
+      containerConcurrency: 40
+      timeoutSeconds: 300
+      containers:
+        - image: asia-east1-docker.pkg.dev/side-project-platform/gigabyte-cashback/api:REPLACE_TAG
+          ports:
+            - name: http1
+              containerPort: 8080
+          resources:
+            limits:
+              cpu: "1"
+              memory: 1Gi
+          env:
+            - name: ASPNETCORE_ENVIRONMENT
+              value: Production
+            - name: ASPNETCORE_URLS
+              value: http://+:8080
+            - name: App__SelfUrl
+              value: https://REPLACE_API_HOST
+            - name: App__ClientUrl
+              value: https://REPLACE_PUBLIC_HOST
+            - name: App__CorsOrigins
+              value: https://REPLACE_PUBLIC_HOST,https://REPLACE_ADMIN_HOST
+            - name: AuthServer__Authority
+              value: https://REPLACE_API_HOST
+            - name: Foundation__AllowVerificationActions
+              value: "false"
+            - name: BlobStorage__Provider
+              value: Google
+            - name: BlobStorage__Google__ProjectId
+              value: side-project-platform
+            - name: BlobStorage__Google__BucketName
+              value: REPLACE_PRIVATE_BUCKET
+            - name: ConnectionStrings__Default
+              valueFrom:
+                secretKeyRef:
+                  name: REPLACE_DB_SECRET
+                  key: latest
+            - name: StringEncryption__DefaultPassPhrase
+              valueFrom:
+                secretKeyRef:
+                  name: REPLACE_ENCRYPTION_SECRET
+                  key: latest

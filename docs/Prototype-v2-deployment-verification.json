@@ -1,0 +1,46 @@
+{
+  "VerifiedAtUtc": "2026-08-28T09:52:59.8760379Z",
+  "Account": "yoyo.chen@gigabyte.com",
+  "Project": "side-project-platform",
+  "Region": "asia-east1",
+  "Service": "gigabyte-cashback",
+  "URL": "https://gigabyte-cashback-219894818230.asia-east1.run.app",
+  "Revision": "gigabyte-cashback-00004-4t7",
+  "PreviousRevision": "gigabyte-cashback-00003-mvp",
+  "Traffic": [
+    {
+      "latestRevision": true,
+      "percent": 100,
+      "revisionName": "gigabyte-cashback-00004-4t7"
+    }
+  ],
+  "PublicAccessPreserved": true,
+  "InvokerIamDisabled": true,
+  "AnonymousHomeStatus": 200,
+  "AnonymousHealthStatus": 200,
+  "Health": {
+    "status": "ok",
+    "application": "gigabyte-cashback",
+    "version": "2.0.1",
+    "mode": "internal-uat",
+    "integrations": "simulated"
+  },
+  "Assets": [
+    {
+      "Path": "/assets/index-2EBYmxJP.js",
+      "Status": 200,
+      "SHA256": "A98E9E537A1D2FD5E6F96B7BDE8FF769FD70730B820676E8320B679E6007B7F5",
+      "MatchesValidatedBuild": true
+    },
+    {
+      "Path": "/assets/index-CWZf-J9n.css",
+      "Status": 200,
+      "SHA256": "C7035DC1B70C486C2A01F91617223FC904558B6B91DE0F5BB1143CD264FC67C8",
+      "MatchesValidatedBuild": true
+    }
+  ],
+  "TestsPassed": 21,
+  "TypeScriptCheckPassed": true,
+  "BrowserInteractionTested": false,
+  "Fix": "Validate claim wizard steps by explicit step metadata; consent remains required only at final review and submission."
+}

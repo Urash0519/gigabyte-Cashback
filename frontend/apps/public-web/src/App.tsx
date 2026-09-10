@@ -21,7 +21,9 @@ import { ClaimForm } from "./ClaimForm";
 import { BankChange } from "./BankChange";
 import { Promotions, PromotionDetails } from "./Promotions";
 import "./public.css";
+import { useLocale } from "./i18n";
 export function App() {
+  const { locale, setLocale, t } = useLocale();
   const [session, setSession] = useState<Session>();
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
   const [claims, setClaims] = useState<Claim[]>([]);
@@ -110,22 +112,26 @@ export function App() {
   return (
     <div className="cashback-public">
       <div className="uat-banner">
-        Internal evaluation · use synthetic personal and bank details
+        {" "}
+        {t(
+          "Internal evaluation · use synthetic personal and bank details",
+        )}{" "}
       </div>
       <header className="topbar">
         <button
           className="brand public-brand"
-          aria-label="GIGABYTE Cashback home"
+          aria-label={t("GIGABYTE Cashback home")}
           onClick={() => setView("campaigns")}
         >
-          GIGABYTE <small>CASHBACK</small>
+          GIGABYTE <small>{t("CASHBACK")}</small>
         </button>
-        <nav aria-label="Main navigation">
+        <nav aria-label={t("Main navigation")}>
           <button
             className={`public-nav-link ${["campaigns", "detail"].includes(view) ? "active" : ""}`}
             onClick={() => setView("campaigns")}
           >
-            Cashback offers
+            {" "}
+            {t("Cashback offers")}{" "}
           </button>
           <button
             className={`public-nav-link ${["claims", "case"].includes(view) ? "active" : ""}`}
@@ -134,12 +140,13 @@ export function App() {
               setCampaignId("");
             }}
           >
-            My claims
+            {" "}
+            {t("My claims")}{" "}
           </button>
           <label className="public-market">
             <span className="market-code">{market}</span>
             <select
-              aria-label="Promotion market"
+              aria-label={t("Promotion market")}
               value={market}
               disabled={view === "form"}
               onChange={(e) => {
@@ -149,12 +156,25 @@ export function App() {
             >
               {markets.map((m) => (
                 <option key={m} value={m}>
-                  {marketNames[m]}
+                  {t(marketNames[m])}
                 </option>
               ))}
             </select>
           </label>
-          <a href={urls.admin}>Administration ↗</a>
+          <label className="public-language">
+            <span>{t("Interface language")}</span>
+            <select
+              aria-label={t("Interface language")}
+              value={locale}
+              onChange={(e) =>
+                setLocale(e.target.value === "zh-TW" ? "zh-TW" : "en")
+              }
+            >
+              <option value="en">{t("English")}</option>
+              <option value="zh-TW">繁體中文</option>
+            </select>
+          </label>
+          <a href={urls.admin}>{t("Administration ↗")}</a>
           {logged ? (
             <>
               <span className="identity">{session?.email}</span>
@@ -170,7 +190,8 @@ export function App() {
                   })
                 }
               >
-                Sign out
+                {" "}
+                {t("Sign out")}{" "}
               </button>
             </>
           ) : (
@@ -178,7 +199,8 @@ export function App() {
               className="button button-light"
               onClick={() => setView("login")}
             >
-              Sign in
+              {" "}
+              {t("Sign in")}{" "}
             </button>
           )}
         </nav>
@@ -192,21 +214,23 @@ export function App() {
       >
         {error && (
           <p className="message error" role="alert">
-            {error}
+            {t(error)}
           </p>
         )}
         {message && (
           <p className="message" role="status">
-            {message}
+            {t(message)}
           </p>
         )}
         {view === "login" && (
           <section className="panel login-panel">
-            <Badge>Development access</Badge>
-            <h1 style={{ marginTop: 20 }}>Your cashback workspace</h1>
+            <Badge>{t("Development access")}</Badge>
+            <h1 style={{ marginTop: 20 }}>{t("Your cashback workspace")}</h1>
             <p>
-              Continue with the evaluation identity to save and track your
-              claims.
+              {" "}
+              {t(
+                "Continue with the evaluation identity to save and track your claims.",
+              )}{" "}
             </p>
             <button
               className="button button-primary"
@@ -230,10 +254,12 @@ export function App() {
                 })
               }
             >
-              {busy ? "Signing in…" : "Sign in for development"}
+              {busy ? t("Signing in…") : t("Sign in for development")}
             </button>
             <small>yoyo.chen@gigabyte.com</small>
-            <small>Google sign-in will be connected in a later release.</small>
+            <small>
+              {t("Google sign-in will be connected in a later release.")}
+            </small>
           </section>
         )}
         {view === "campaigns" && (
@@ -273,10 +299,12 @@ export function App() {
           <>
             <div className="page-head">
               <div>
-                <h1>My claims</h1>
+                <h1>{t("My claims")}</h1>
                 <p>
-                  Track reviews, provide information and follow payment
-                  outcomes.
+                  {" "}
+                  {t(
+                    "Track reviews, provide information and follow payment outcomes.",
+                  )}{" "}
                 </p>
               </div>
               <button
@@ -284,20 +312,21 @@ export function App() {
                 disabled={busy}
                 onClick={() => void run(reload)}
               >
-                Refresh
+                {" "}
+                {t("Refresh")}{" "}
               </button>
             </div>
-            <Panel title="Your applications">
+            <Panel title={t("Your applications")}>
               <div className="table-wrap">
                 <table>
                   <thead>
                     <tr>
-                      <th>Reference</th>
-                      <th>Promotion</th>
-                      <th>Review</th>
-                      <th>Payment</th>
-                      <th>Reward</th>
-                      <th>Action</th>
+                      <th>{t("Reference")}</th>
+                      <th>{t("Promotion")}</th>
+                      <th>{t("Review")}</th>
+                      <th>{t("Payment")}</th>
+                      <th>{t("Reward")}</th>
+                      <th>{t("Action")}</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -315,11 +344,17 @@ export function App() {
                             c.data.campaignId}
                         </td>
                         <td>
-                          <Badge>{c.reviewStatus}</Badge>
-                          {c.onHold && <Badge>OnHold</Badge>}
+                          <Badge label={t(c.reviewStatus)}>
+                            {c.reviewStatus}
+                          </Badge>
+                          {c.onHold && (
+                            <Badge label={t("OnHold")}>OnHold</Badge>
+                          )}
                         </td>
                         <td>
-                          <Badge>{c.paymentStatus}</Badge>
+                          <Badge label={t(c.paymentStatus)}>
+                            {c.paymentStatus}
+                          </Badge>
                         </td>
                         <td>{money(c.amountMinor, c.currency)}</td>
                         <td>
@@ -334,8 +369,8 @@ export function App() {
                             }}
                           >
                             {c.reviewStatus === "Draft"
-                              ? "Continue draft"
-                              : "View case"}
+                              ? t("Continue draft")
+                              : t("View case")}
                           </button>
                         </td>
                       </tr>
@@ -344,7 +379,9 @@ export function App() {
                 </table>
               </div>
               {!claims.length && (
-                <Empty>No claims yet. Choose a promotion to start.</Empty>
+                <Empty>
+                  {t("No claims yet. Choose a promotion to start.")}
+                </Empty>
               )}
             </Panel>
           </>
@@ -355,31 +392,37 @@ export function App() {
               <div>
                 <h1>{claim.reference}</h1>
                 <p>
-                  <Badge>{claim.reviewStatus}</Badge>{" "}
-                  <Badge>{claim.paymentStatus}</Badge>{" "}
-                  {claim.onHold && <Badge>OnHold</Badge>}
+                  <Badge label={t(claim.reviewStatus)}>
+                    {claim.reviewStatus}
+                  </Badge>{" "}
+                  <Badge label={t(claim.paymentStatus)}>
+                    {claim.paymentStatus}
+                  </Badge>{" "}
+                  {claim.onHold && <Badge label={t("OnHold")}>OnHold</Badge>}
                 </p>
               </div>
               <button
                 className="button button-light"
                 onClick={() => setView("claims")}
               >
-                Back to my claims
+                {" "}
+                {t("Back to my claims")}{" "}
               </button>
             </div>
             <div className="split">
               <div>
-                <Panel title="Application summary">
+                <Panel title={t("Application summary")}>
                   <p>
                     {claim.data.firstName} {claim.data.lastName} ·{" "}
                     {claim.data.email}
                   </p>
                   <p>
-                    {claim.data.items.length} products ·{" "}
+                    {claim.data.items.length} {t("products ·")}{" "}
                     {money(claim.amountMinor, claim.currency)}
                   </p>
                   <p>
-                    Invoice {claim.data.invoiceNumber} ·{" "}
+                    {" "}
+                    {t("Invoice")} {claim.data.invoiceNumber} ·{" "}
                     {claim.data.purchaseDate.slice(0, 10)}
                   </p>
                   {claim.reviewStatus === "MoreInfoRequired" && (
@@ -387,7 +430,8 @@ export function App() {
                       className="button button-primary"
                       onClick={() => setView("form")}
                     >
-                      Provide requested information
+                      {" "}
+                      {t("Provide requested information")}{" "}
                     </button>
                   )}
                 </Panel>
@@ -395,9 +439,10 @@ export function App() {
                   !["Cancelled", "Rejected"].includes(claim.reviewStatus) && (
                     <BankChange claim={claim} onSaved={update} />
                   )}
-                <Panel title="Contact support">
+                <Panel title={t("Contact support")}>
                   <ActionForm
-                    label="Add case message"
+                    reasonLabel={t("Reason / reference")}
+                    label={t("Add case message")}
                     disabled={busy}
                     onSubmit={(reason) =>
                       run(async () => {
@@ -412,13 +457,16 @@ export function App() {
                   />
                 </Panel>
                 {!["Rejected", "Cancelled"].includes(claim.reviewStatus) && (
-                  <Panel title="Cancellation request">
+                  <Panel title={t("Cancellation request")}>
                     <p className="muted">
-                      Cancellation is only completed if there is no payment
-                      risk. Otherwise contact support for investigation.
+                      {" "}
+                      {t(
+                        "Cancellation is only completed if there is no payment risk. Otherwise contact support for investigation.",
+                      )}{" "}
                     </p>
                     <ActionForm
-                      label="Request cancellation"
+                      reasonLabel={t("Reason / reference")}
+                      label={t("Request cancellation")}
                       disabled={busy}
                       onSubmit={(reason) =>
                         run(async () => {
@@ -434,7 +482,7 @@ export function App() {
                   </Panel>
                 )}
               </div>
-              <Panel title="Timeline">
+              <Panel title={t("Timeline")}>
                 <ol className="timeline">
                   {[...claim.history].reverse().map((e) => (
                     <li key={e.id}>
@@ -449,7 +497,9 @@ export function App() {
           </>
         )}
       </main>
-      <footer className="footer">GIGABYTE Cashback · Sample environment</footer>
+      <footer className="footer">
+        {t("GIGABYTE Cashback · Sample environment")}
+      </footer>
     </div>
   );
 }

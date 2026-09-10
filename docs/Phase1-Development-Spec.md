@@ -1,10 +1,12 @@
 # GIGABYTE Cashback Phase 1 Development Spec
 
-版本：0.2
-日期：2026-09-09
+版本：0.3
+日期：2026-09-10
 依據：2026-09-09 使用者決策；本 Spec 為開發範圍主文件，SA 依本文件同步。舊站欄位見 [Legacy-Field-Mapping.md](Legacy-Field-Mapping.md)，報表見 [Reporting-Dimensions.md](Reporting-Dimensions.md)。
 
 ## 1. 文件目的
+
+2026-09-10 決策追加：未送出 Draft 於開啟與送出前檢查最新發布版本，先提示使用者確認才套用；保留填寫資料與附件，重新同意條款／隱私。已送出與 MoreInfoRequired 等其他階段保留送出時版本。前台新增繁體中文介面與申請語言，送出錯誤須在操作區可見並自動聚焦。完整規則與驗收見 [草稿版本與語系](Draft-Version-and-Language.md)。
 
 本文件將已確認的 Phase 1 Scope 拆成可開發的前台、後台、共用服務與資料規格。M/P1 為第一版必要需求；S/P1 亦先提供基本版本，不以尚未選定銀行或正式矩陣為理由暫停其他功能。未確認值使用明確標示且可配置的 UAT 樣本，正式上線前再核定。Prototype 03 只用於流程與介面驗收，不是正式資料、安全或付款能力。
 

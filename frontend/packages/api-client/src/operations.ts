@@ -66,6 +66,14 @@ export type Campaign = {
     data: CampaignInput;
   }[];
 };
+export type ClaimVersionCheck = {
+  currentVersionId: string;
+  currentVersion: number;
+  latestVersionId: string;
+  latestVersion: number;
+  needsUpdate: boolean;
+  campaign: Campaign;
+};
 export type Bank = {
   accountHolderProfileType: string;
   accountHolder: string;
@@ -289,6 +297,14 @@ export const api = {
     post<Campaign>(`/api/operations/campaigns/${id}/publish`, { reason }),
   claimCampaign: (claimId: string) =>
     apiRequest<Campaign>(`/api/operations/claims/${claimId}/campaign`),
+  claimVersionCheck: (claimId: string) =>
+    apiRequest<ClaimVersionCheck>(
+      `/api/operations/claims/${claimId}/version-check`,
+    ),
+  applyClaimVersion: (claimId: string, expectedLatestVersionId: string) =>
+    post<Claim>(`/api/operations/claims/${claimId}/apply-version`, {
+      expectedLatestVersionId,
+    }),
   claims: (admin = false) =>
     apiRequest<Claim[]>(`/api/operations/claims?admin=${admin}`),
   createClaim: (data: ClaimInput) =>

@@ -732,6 +732,32 @@
     font-size: 36px;
   }
 }
+.public-language {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+.public-language select {
+  min-height: 38px;
+  max-width: 150px;
+  padding: 7px 10px;
+  color: #26313b;
+  background: #fff;
+  border: 1px solid #d7dce1;
+  border-radius: 5px;
+}
+html[lang="zh-TW"] .cashback-public {
+  font-family: "Noto Sans TC", "Microsoft JhengHei", system-ui, sans-serif;
+}
+html[lang="zh-TW"] .hero-copy h1 {
+  line-height: 1.25;
+}
+@media (max-width: 700px) {
+  .public-language > span {
+    display: none;
+  }
+}
 @media (prefers-reduced-motion: no-preference) {
   .offer-link:hover {
     color: #963b00;

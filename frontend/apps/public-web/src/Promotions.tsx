@@ -1,3 +1,4 @@
+import { useLocale } from "./i18n";
 import { useState } from "react";
 import {
   marketNames,
@@ -24,6 +25,7 @@ export function PromotionArt({
   campaign?: Campaign;
   compact?: boolean;
 }) {
+  const { t } = useLocale();
   return (
     <div
       className={`promotion-art ${compact ? "compact" : ""}`}
@@ -44,9 +46,9 @@ export function PromotionArt({
       )}
       {campaign && !compact && (
         <div className="reward-seal">
-          <small>UP TO</small>
+          <small>{t("UP TO")}</small>
           <strong>{money(ceiling(campaign), campaign.data.currency)}</strong>
-          <small>PER PRODUCT</small>
+          <small>{t("PER PRODUCT")}</small>
         </div>
       )}
     </div>
@@ -54,6 +56,7 @@ export function PromotionArt({
 }
 
 export function HowItWorks() {
+  const { t } = useLocale();
   return (
     <div className="journey-grid">
       {[
@@ -80,8 +83,8 @@ export function HowItWorks() {
       ].map(([n, title, text]) => (
         <article key={n}>
           <span>{n}</span>
-          <h3>{title}</h3>
-          <p>{text}</p>
+          <h3>{t(title)}</h3>
+          <p>{t(text)}</p>
         </article>
       ))}
     </div>
@@ -99,6 +102,7 @@ export function Promotions({
   onOpen: (c: Campaign) => void;
   onTrack: () => void;
 }) {
+  const { t } = useLocale();
   const list = campaigns.filter((c) => c.data.markets.includes(market));
   const featured = list.find(available) ?? list[0];
   return (
@@ -106,56 +110,61 @@ export function Promotions({
       <section className="promotion-hero">
         <div className="hero-copy">
           <p className="eyebrow">
-            GIGABYTE REWARDS · {marketNames[market]?.toUpperCase()}
+            {t("GIGABYTE REWARDS ·")}
+            {t(marketNames[market] ?? market)}
           </p>
           <h1>
-            Build more.
+            {t("Build more.")}
             <br />
-            <em>Get more back.</em>
+            <em>{t("Get more back.")}</em>
           </h1>
           <p>
-            Your next upgrade, rewarded. Explore eligible products and bring
-            them together in one cashback claim.
+            {t(
+              "Your next upgrade, rewarded. Explore eligible products and bring them together in one cashback claim.",
+            )}
           </p>
           <div className="actions">
             <a className="button button-primary" href="#cashback-offers">
-              Explore cashback ↗
+              {t("Explore cashback ↗")}
             </a>
             <button className="button hero-secondary" onClick={onTrack}>
-              Track a claim
+              {t("Track a claim")}
             </button>
           </div>
           <div className="hero-points">
             <span>
-              <b>01</b> Choose products
+              <b>01</b> {t("Choose products")}
             </span>
             <span>
-              <b>02</b> One invoice
+              <b>02</b> {t("One invoice")}
             </span>
             <span>
-              <b>03</b> Track every step
+              <b>03</b> {t("Track every step")}
             </span>
           </div>
         </div>
         <PromotionArt campaign={featured} />
       </section>
       <div className="market-strip">
-        <span>FIVE MARKETS. ONE PROGRAMME.</span>
+        <span>{t("FIVE MARKETS. ONE PROGRAMME.")}</span>
         {markets.map((m) => (
           <span key={m} className={m === market ? "selected" : ""}>
-            <b>{m}</b> {marketNames[m]}
+            <b>{m}</b> {t(marketNames[m])}
           </span>
         ))}
       </div>
       <section className="promotion-section" id="cashback-offers">
         <div className="section-title">
           <div>
-            <p className="eyebrow">CASHBACK OFFERS</p>
-            <h2>Your next upgrade starts here.</h2>
+            <p className="eyebrow">{t("CASHBACK OFFERS")}</p>
+            <h2>{t("Your next upgrade starts here.")}</h2>
           </div>
           <p>
-            Explore promotions for {marketNames[market]}.<br />
-            Eligibility and rewards depend on each offer.
+            {t("Explore promotions for {market}.", {
+              market: t(marketNames[market]),
+            })}
+            <br />
+            {t("Eligibility and rewards depend on each offer.")}
           </p>
         </div>
         <div className="offer-grid">
@@ -170,27 +179,34 @@ export function Promotions({
                     )}
                   </span>
                   <Badge>
-                    {available(c) ? "Open for claims" : "Not accepting claims"}
+                    {available(c)
+                      ? t("Open for claims")
+                      : t("Not accepting claims")}
                   </Badge>
                 </div>
                 <h3>{c.data.name}</h3>
                 <p>{c.data.description}</p>
                 <p>
-                  <strong>Up to {money(ceiling(c), c.data.currency)}</strong>{" "}
-                  per eligible product
+                  <strong>
+                    {t("Up to {amount}", {
+                      amount: money(ceiling(c), c.data.currency),
+                    })}
+                  </strong>{" "}
+                  {t("per eligible product")}
                 </p>
                 <dl>
                   <div>
-                    <dt>Purchase period</dt>
+                    <dt>{t("Purchase period")}</dt>
                     <dd>{period(c.data.purchaseStart, c.data.purchaseEnd)}</dd>
                   </div>
                   <div>
-                    <dt>Claim period</dt>
+                    <dt>{t("Claim period")}</dt>
                     <dd>{period(c.data.claimStart, c.data.claimEnd)}</dd>
                   </div>
                 </dl>
                 <button className="offer-link" onClick={() => onOpen(c)}>
-                  View offer <span>→</span>
+                  {t("View offer")}
+                  <span>→</span>
                 </button>
               </div>
             </article>
@@ -198,22 +214,23 @@ export function Promotions({
         </div>
         {!list.length && (
           <Empty>
-            No published campaigns for this market. Choose another market or
-            check back later.
+            {t(
+              "No published campaigns for this market. Choose another market or check back later.",
+            )}
           </Empty>
         )}
       </section>
-      <section className="benefit-strip" aria-label="Programme benefits">
+      <section className="benefit-strip" aria-label={t("Programme benefits")}>
         {[
           ["✓", "Same-invoice claims", "Keep eligible products together"],
           ["◎", "Cross-border purchases", "Check each offer’s eligible stores"],
           ["€", "Traceable decisions", "Follow review and payment separately"],
         ].map(([icon, title, text]) => (
-          <div key={title}>
+          <div key={t(title)}>
             <span>{icon}</span>
             <p>
-              <b>{title}</b>
-              <small>{text}</small>
+              <b>{t(title)}</b>
+              <small>{t(text)}</small>
             </p>
           </div>
         ))}
@@ -221,8 +238,8 @@ export function Promotions({
       <section className="promotion-section">
         <div className="section-title">
           <div>
-            <p className="eyebrow">HOW IT WORKS</p>
-            <h2>From upgrade to cashback.</h2>
+            <p className="eyebrow">{t("HOW IT WORKS")}</p>
+            <h2>{t("From upgrade to cashback.")}</h2>
           </div>
         </div>
         <HowItWorks />
@@ -244,6 +261,7 @@ export function PromotionDetails({
   onBack: () => void;
   onStart: () => void;
 }) {
+  const { t } = useLocale();
   const [section, setSection] = useState("products");
   const [search, setSearch] = useState("");
   const query = search.trim().toLocaleLowerCase();
@@ -253,7 +271,7 @@ export function PromotionDetails({
       .includes(query),
   );
   const retailers = c.data.retailers.filter((r) =>
-    `${r.name} ${r.country} ${marketNames[r.country] ?? ""}`
+    `${r.name} ${r.country} ${marketNames[r.country] ?? ""} ${t(marketNames[r.country] ?? "")}`
       .toLocaleLowerCase()
       .includes(query),
   );
@@ -263,20 +281,20 @@ export function PromotionDetails({
       <section className="promotion-hero detail-hero">
         <div className="hero-copy">
           <button className="back-offers" onClick={onBack}>
-            ← All offers
+            {t("← All offers")}
           </button>
           <p className="eyebrow">
-            {marketNames[market]} · {c.data.type}
+            {t(marketNames[market])} · {c.data.type}
           </p>
           <h1>{c.data.name}</h1>
           <p>{c.data.description}</p>
           <div className="hero-dates">
             <div>
-              <small>BUY BETWEEN</small>
+              <small>{t("BUY BETWEEN")}</small>
               <b>{period(c.data.purchaseStart, c.data.purchaseEnd)}</b>
             </div>
             <div>
-              <small>CLAIM WINDOW</small>
+              <small>{t("CLAIM WINDOW")}</small>
               <b>{period(c.data.claimStart, c.data.claimEnd)}</b>
             </div>
           </div>
@@ -285,20 +303,26 @@ export function PromotionDetails({
             disabled={busy || !accepting}
             onClick={onStart}
           >
-            {accepting ? "Start your claim →" : "Claims currently unavailable"}
+            {accepting
+              ? t("Start your claim →")
+              : t("Claims currently unavailable")}
           </button>
           <p className="hero-caption">
-            Wait {c.data.waitingDays} days after purchase · {c.data.timeZone} ·
-            Version {c.publishedVersion}
+            {t("Wait {days} days after purchase · {timeZone}", {
+              days: c.data.waitingDays,
+              timeZone: c.data.timeZone,
+            })}
           </p>
           <p className="hero-caption">
-            Up to {money(ceiling(c), c.data.currency)} per eligible product.
-            Your total depends on the products and campaign rules.
+            {t(
+              "Up to {amount} per eligible product. Your total depends on the products and campaign rules.",
+              { amount: money(ceiling(c), c.data.currency) },
+            )}
           </p>
         </div>
         <PromotionArt campaign={c} />
       </section>
-      <nav className="detail-tabs" aria-label="Campaign details">
+      <nav className="detail-tabs" aria-label={t("Campaign details")}>
         {[
           ["products", "Eligible products"],
           ["retailers", "Retailers"],
@@ -314,30 +338,30 @@ export function PromotionDetails({
               setSearch("");
             }}
           >
-            {label}
+            {t(label)}
           </button>
         ))}
       </nav>
       <section className="promotion-section">
         <div className="section-title">
           <div>
-            <p className="eyebrow">PROMOTION DETAILS</p>
+            <p className="eyebrow">{t("PROMOTION DETAILS")}</p>
             <h2>
               {section === "products"
-                ? "Choose your reward."
+                ? t("Choose your reward.")
                 : section === "retailers"
-                  ? "Shop across borders."
+                  ? t("Shop across borders.")
                   : section === "how"
-                    ? "From purchase to payout."
-                    : "Clear rules. No surprises."}
+                    ? t("From purchase to payout.")
+                    : t("Clear rules. No surprises.")}
             </h2>
           </div>
           {["products", "retailers"].includes(section) && (
             <label className="promotion-search">
               <span>
                 {section === "products"
-                  ? "Search products"
-                  : "Search stores or countries"}
+                  ? t("Search products")
+                  : t("Search stores or countries")}
               </span>
               <input
                 type="search"
@@ -345,8 +369,8 @@ export function PromotionDetails({
                 onChange={(e) => setSearch(e.target.value)}
                 placeholder={
                   section === "products"
-                    ? "Product, series or category"
-                    : "Store or country"
+                    ? t("Product, series or category")
+                    : t("Store or country")
                 }
               />
             </label>
@@ -377,25 +401,29 @@ export function PromotionDetails({
                     disabled={busy || !accepting}
                     onClick={onStart}
                   >
-                    Claim →
+                    {t("Claim →")}
                   </button>
                 </article>
               ))}
             </div>
-            {!products.length && <Empty>No products match your search.</Empty>}
+            {!products.length && (
+              <Empty>{t("No products match your search.")}</Empty>
+            )}
             <p className="promotion-note">
-              Maximum {c.data.maxItemsPerCategory} item(s) per category. All
-              claimed products must be on the same invoice. Selecting Claim
-              opens the application; choose your products in the purchase step.
+              {t(
+                "Maximum {count} item(s) per category. All claimed products must be on the same invoice. Selecting Claim opens the application; choose your products in the purchase step.",
+                { count: c.data.maxItemsPerCategory },
+              )}
             </p>
           </>
         )}
         {section === "retailers" && (
           <>
             <p className="cross-border-note">
-              Your activity market is <b>{marketNames[market]}</b>. Your
-              purchase country may differ. Select an eligible retailer by
-              purchase country when applying.
+              {t(
+                "Your activity market is {market}. Your purchase country may differ. Select an eligible retailer by purchase country when applying.",
+                { market: t(marketNames[market]) },
+              )}
             </p>
             <div className="retailer-display">
               {retailers.map((r) => (
@@ -403,53 +431,58 @@ export function PromotionDetails({
                   <span>{r.country}</span>
                   <div>
                     <h3>{r.name}</h3>
-                    <p>{marketNames[r.country] ?? r.country}</p>
+                    <p>{t(marketNames[r.country] ?? r.country)}</p>
                     {(r.validFrom || r.validTo) && (
                       <small>
-                        {r.validFrom?.slice(0, 10) ?? "No start limit"} —{" "}
-                        {r.validTo?.slice(0, 10) ?? "No end limit"}
+                        {r.validFrom?.slice(0, 10) ?? t("No start limit")} —{" "}
+                        {r.validTo?.slice(0, 10) ?? t("No end limit")}
                       </small>
                     )}
                   </div>
                 </article>
               ))}
             </div>
-            {!retailers.length && <Empty>No stores match your search.</Empty>}
+            {!retailers.length && (
+              <Empty>{t("No stores match your search.")}</Empty>
+            )}
           </>
         )}
         {section === "how" && (
           <>
             <HowItWorks />
             <p className="cross-border-note">
-              For this offer, wait {c.data.waitingDays} days after purchase and
-              submit within the claim window. Review and payment timing follow
-              the campaign terms.
+              {t(
+                "For this offer, wait {days} days after purchase and submit within the claim window. Review and payment timing follow the campaign terms.",
+                { days: c.data.waitingDays },
+              )}
             </p>
           </>
         )}
         {section === "terms" && (
           <div className="promotion-terms">
             <details open>
-              <summary>Terms — {c.data.termsVersion}</summary>
+              <summary>
+                {t("Terms — {version}", { version: c.data.termsVersion })}
+              </summary>
               <p className="pre-wrap">
-                {c.data.terms || "Terms have not been provided."}
+                {c.data.terms || t("Terms have not been provided.")}
               </p>
             </details>
             <details>
-              <summary>Privacy notice</summary>
+              <summary>{t("Privacy notice")}</summary>
               <p className="pre-wrap">
-                {c.data.privacy || "Privacy notice has not been provided."}
+                {c.data.privacy || t("Privacy notice has not been provided.")}
               </p>
             </details>
             <details>
-              <summary>Frequently asked questions</summary>
+              <summary>{t("Frequently asked questions")}</summary>
               <p className="pre-wrap">
-                {c.data.faq || "No FAQs have been provided."}
+                {c.data.faq || t("No FAQs have been provided.")}
               </p>
             </details>
             {c.data.supportEmail && (
               <p>
-                Need help?{" "}
+                {t("Need help?")}{" "}
                 <a href={`mailto:${c.data.supportEmail}`}>
                   {c.data.supportEmail}
                 </a>

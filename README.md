@@ -1,9 +1,11 @@
 # GIGABYTE Cashback
 
-Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。需求以 [Development Spec v0.2](docs/Phase1-Development-Spec.md) 為主；[SA v0.6](docs/Gigabyte-Cashback-SA.md) 已同步。`site/` 保留 v3 模擬原型供歷史參考，現在的業務實作位於 `frontend/` 與 `backend/aspnet-core/`。
+Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。需求以 [Development Spec v0.3](docs/Phase1-Development-Spec.md) 為主；[SA v0.7](docs/Gigabyte-Cashback-SA.md) 已同步。`site/` 保留 v3 模擬原型供歷史參考，現在的業務實作位於 `frontend/` 與 `backend/aspnet-core/`。
 
 ## 本版功能
 
+- 未送出草稿在開啟與送出前檢查最新發布版本，提示確認後保留資料與附件套用，並重新確認條款／隱私同意；已送出及補件案件保持送出時版本。
+- 前台提供 English／繁體中文切換並記住選擇；申請語言可選繁體中文。活動名稱、產品及條款原文仍依後台設定呈現。送出錯誤顯示於操作按鈕旁，自動捲動並聚焦提示。詳見 [草稿版本與語系](docs/Draft-Version-and-Language.md)。
 - Campaign：建立、複製、編輯、發布不可變版本、比較；舊站名稱／類型／期間／國家與狀態分類，產品／系列／金額、通路有效期、內容、限制與預算設定。
 - Claims：伺服器 Draft、完整個人／地址／銀行欄位、同發票多產品、產品日期／通路、文件上傳、同意版本、伺服器金額計算、序號與人／戶／活動互斥規則。
 - Tracker／客服：本人案件、補件更正、歷史版本、取消請求、案件訊息與受控銀行更改。

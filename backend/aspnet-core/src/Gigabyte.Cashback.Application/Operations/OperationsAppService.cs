@@ -288,6 +288,7 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
         var v = Decode<CampaignInput>(version.SnapshotJson);
         var campaign = await campaigns.GetAsync(c.CampaignId);
         var now = Clock.Now;
+        Require(c.ReviewStatus != "Draft" || version.Version == campaign.PublishedVersion, "Campaign has a newer published version. Review and apply the latest version before submitting.");
         var localDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(now, DateTimeKind.Utc), TimeZoneInfo.FindSystemTimeZoneById(v.TimeZone)).Date;
         Require(d.TermsAccepted && d.PrivacyAccepted, "Terms and privacy consent are required.");
         Require(!string.IsNullOrWhiteSpace(d.FirstName) && !string.IsNullOrWhiteSpace(d.LastName) && !string.IsNullOrWhiteSpace(d.Address1) && !string.IsNullOrWhiteSpace(d.Postcode) && !string.IsNullOrWhiteSpace(d.City), "Complete applicant name and address.");

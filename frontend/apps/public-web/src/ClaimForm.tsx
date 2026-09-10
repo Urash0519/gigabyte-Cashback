@@ -1,13 +1,17 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   api,
   markets,
   type Campaign,
   type Claim,
   type ClaimInput,
+  type ClaimVersionCheck,
 } from "@gigabyte-cashback/api-client";
 import { Field, SelectField, Panel, money, Badge } from "@gigabyte-cashback/ui";
 import "./claim-form.css";
+import { ErrorNotice, useFormFeedback } from "./FormFeedback";
+import { VersionUpdateDialog } from "./VersionUpdateDialog";
+import { useLocale } from "./i18n";
 const steps = [
   {
     label: "Applicant",
@@ -42,11 +46,21 @@ type Props = {
   onBack: () => void;
 };
 export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
+  const { locale, t } = useLocale();
   const [draft, setDraft] = useState<ClaimInput>(structuredClone(claim.data));
   const [current, setCurrent] = useState(claim);
+  const [activeCampaign, setActiveCampaign] = useState(campaign);
+  const [pendingVersion, setPendingVersion] = useState<ClaimVersionCheck>();
+  const [checkingVersion, setCheckingVersion] = useState(
+    claim.reviewStatus === "Draft",
+  );
   const [step, setStep] = useState(0);
   const [busy, setBusy] = useState(false);
-  const [error, setError] = useState("");
+  const { error, reportError, clearError } = useFormFeedback();
+  const localizedError = useMemo(
+    () => (error ? { ...error, message: t(error.message) } : null),
+    [error, t],
+  );
   const [message, setMessage] = useState("");
   const [completed, setCompleted] = useState<number[]>([]);
   const [submittedClaim, setSubmittedClaim] = useState<Claim>();
@@ -58,8 +72,29 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
     }
   }, [submittedClaim]);
   const data =
-    campaign.versions.find((v) => v.id === claim.campaignVersionId)?.data ??
-    campaign.data;
+    activeCampaign.versions.find((v) => v.id === current.campaignVersionId)
+      ?.data ?? activeCampaign.data;
+  useEffect(() => {
+    let cancelled = false;
+    if (claim.reviewStatus !== "Draft") return;
+    api
+      .claimVersionCheck(claim.id)
+      .then((check) => {
+        if (!cancelled) {
+          if (check.needsUpdate) setPendingVersion(check);
+          else setActiveCampaign(check.campaign);
+        }
+      })
+      .catch((e) => {
+        if (!cancelled) reportError(e);
+      })
+      .finally(() => {
+        if (!cancelled) setCheckingVersion(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [claim.id]);
   const text = (
     key: keyof ClaimInput,
     label: string,
@@ -68,7 +103,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
   ) => (
     <Field
       key={key}
-      label={label}
+      label={t(label)}
       type={type}
       required={required}
       value={String(draft[key])}
@@ -77,12 +112,12 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
   );
   const execute = async (fn: () => Promise<void>) => {
     setBusy(true);
-    setError("");
+    clearError();
     setMessage("");
     try {
       await fn();
     } catch (e) {
-      setError(e instanceof Error ? e.message : String(e));
+      reportError(e);
     } finally {
       setBusy(false);
     }
@@ -104,6 +139,41 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
     onSaved(saved);
     return saved;
   };
+  const checkLatest = async () => {
+    if (current.reviewStatus !== "Draft") return true;
+    const check = await api.claimVersionCheck(current.id);
+    if (check.needsUpdate) {
+      setPendingVersion(check);
+      return false;
+    }
+    return true;
+  };
+  const applyLatest = () =>
+    void execute(async () => {
+      if (!pendingVersion) return;
+      // Save typed values before rebasing. The server preserves evidence and encrypted bank data.
+      await save();
+      try {
+        const updated = await api.applyClaimVersion(
+          current.id,
+          pendingVersion.latestVersionId,
+        );
+        setCurrent(updated);
+        setDraft(updated.data);
+        setActiveCampaign(pendingVersion.campaign);
+        onSaved(updated);
+        setPendingVersion(undefined);
+        setCompleted([]);
+        setStep(4);
+        setMessage(
+          "Latest campaign rules applied. Review your details and confirm the terms again before submitting.",
+        );
+      } catch (e) {
+        const refreshed = await api.claimVersionCheck(current.id);
+        if (refreshed.needsUpdate) setPendingVersion(refreshed);
+        throw e;
+      }
+    });
   const upload = async (file: File, kind: string, productId = "") => {
     await save();
     await api.upload(current.id, file, kind, productId);
@@ -131,7 +201,8 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
       onClick={() => setStep(target)}
       disabled={busy}
     >
-      Edit
+      {" "}
+      {t("Edit")}{" "}
     </button>
   );
   const evidenceFiles = (kind: string, productId = "") =>
@@ -151,11 +222,11 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
           {files.length ? "✓" : "↑"}
         </span>
         <label className="field">
-          <span>{label}</span>
+          <span>{t(label)}</span>
           <small>
             {files.length
-              ? `${files.length} file(s) uploaded`
-              : "Choose a clear, readable image or document"}
+              ? t("{count} file(s) uploaded", { count: files.length })
+              : t("Choose a clear, readable image or document")}
           </small>
           <input
             type="file"
@@ -178,7 +249,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
               {file.fileName}
             </a>
             <small>
-              {Math.ceil(file.size / 1024)} KB · {file.scanStatus}
+              {Math.ceil(file.size / 1024)} {t("KB ·")} {t(file.scanStatus)}
             </small>
           </div>
         ))}
@@ -191,62 +262,92 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
         <div className="claim-success-mark" aria-hidden="true">
           ✓
         </div>
-        <p className="claim-eyebrow">Application received</p>
+        <p className="claim-eyebrow">{t("Application received")}</p>
         <h1 id="claim-success-title" ref={successHeading} tabIndex={-1}>
-          Your claim is on its way.
+          {" "}
+          {t("Your claim is on its way.")}{" "}
         </h1>
         <p>
-          We have received your claim for {data.name}. Keep your reference handy
-          while we review your application.
+          {" "}
+          {t("We have received your claim for")} {data.name}
+          {t(
+            ". Keep your reference handy while we review your application.",
+          )}{" "}
         </p>
         <div className="claim-success-summary">
           <div>
-            <small>Claim reference</small>
+            <small>{t("Claim reference")}</small>
             <strong>{submittedClaim.reference}</strong>
           </div>
           <div>
-            <small>Cashback submitted for review</small>
+            <small>{t("Cashback submitted for review")}</small>
             <strong>
               {money(submittedClaim.amountMinor, submittedClaim.currency)}
             </strong>
           </div>
         </div>
         <div className="claim-next-steps">
-          <h2>What happens next?</h2>
+          <h2>{t("What happens next?")}</h2>
           <ol>
             <li>
-              We check your purchase, product details and supporting documents.
+              {" "}
+              {t(
+                "We check your purchase, product details and supporting documents.",
+              )}{" "}
             </li>
             <li>
-              If we need more information, you can provide it through My claims.
+              {" "}
+              {t(
+                "If we need more information, you can provide it through My claims.",
+              )}{" "}
             </li>
             <li>
-              Track your review status and, once approved, payment progress in
-              My claims.
+              {" "}
+              {t(
+                "Track your review status and, once approved, payment progress in My claims.",
+              )}{" "}
             </li>
           </ol>
         </div>
         <button className="button button-primary" onClick={onBack}>
-          Track in My claims
+          {" "}
+          {t("Track in My claims")}{" "}
         </button>
       </section>
     );
   return (
     <>
+      <VersionUpdateDialog
+        open={Boolean(pendingVersion)}
+        currentVersion={pendingVersion?.currentVersion ?? 0}
+        latestVersion={pendingVersion?.latestVersion ?? 0}
+        onConfirm={applyLatest}
+        onCancel={() => {
+          setPendingVersion(undefined);
+        }}
+        busy={busy}
+        error={localizedError}
+        locale={locale}
+      />
       <div className="page-head">
         <div>
           <h1>{data.name}</h1>
           <p>
-            Claim {current.reference} · <Badge>{current.reviewStatus}</Badge>
+            {" "}
+            {t("Claim")} {current.reference} ·{" "}
+            <Badge label={t(current.reviewStatus)}>
+              {current.reviewStatus}
+            </Badge>
           </p>
         </div>
         <button className="button button-light" onClick={onBack}>
-          Back to my claims
+          {" "}
+          {t("Back to my claims")}{" "}
         </button>
       </div>
       <div className="claim-wizard">
-        <aside className="claim-step-sidebar" aria-label="Claim progress">
-          <p className="claim-eyebrow">Your application</p>
+        <aside className="claim-step-sidebar" aria-label={t("Claim progress")}>
+          <p className="claim-eyebrow">{t("Your application")}</p>
           <div className="claim-step-list">
             {steps.map(({ label }, i) => (
               <button
@@ -262,45 +363,57 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                   {completed.includes(i) ? (
                     <>
                       <span aria-hidden="true">✓</span>
-                      <span className="claim-sr-only">Saved: </span>
+                      <span className="claim-sr-only">{t("Saved:")} </span>
                     </>
                   ) : (
                     i + 1
                   )}
                 </span>
-                <span>{label}</span>
+                <span>{t(label)}</span>
               </button>
             ))}
           </div>
           <p className="claim-sidebar-help">
-            One invoice, multiple eligible products. Save your draft and return
-            whenever you need.
+            {" "}
+            {t(
+              "One invoice, multiple eligible products. Save your draft and return whenever you need.",
+            )}{" "}
           </p>
         </aside>
         <div className="claim-step-content">
-          {error && (
-            <p className="message error" role="alert">
-              {error}
-            </p>
+          {checkingVersion && (
+            <p role="status">{t("Checking campaign updates…")}</p>
           )}
           {message && (
             <p className="message" role="status">
-              {message}
+              {t(message)}
             </p>
           )}
-          <Panel title={steps[step].title}>
+          <Panel title={t(steps[step].title)}>
             <p className="claim-step-hint">
-              Step {step + 1} of 5 · {steps[step].hint}
+              {" "}
+              {t("Step")} {step + 1} {t("of 5 ·")} {t(steps[step].hint)}
             </p>
             <form
               onSubmit={(e) => {
                 e.preventDefault();
                 void execute(async () => {
+                  if (step === 4 && !(await checkLatest())) return;
                   await save();
                   setCompleted((previous) => [...new Set([...previous, step])]);
                   if (step < 4) setStep(step + 1);
                   else {
-                    const submitted = await api.submitClaim(current.id);
+                    let submitted: Claim;
+                    try {
+                      submitted = await api.submitClaim(current.id);
+                    } catch (e) {
+                      if (
+                        current.reviewStatus === "Draft" &&
+                        !(await checkLatest())
+                      )
+                        return;
+                      throw e;
+                    }
                     onSaved(submitted);
                     setCurrent(submitted);
                     setSubmittedClaim(submitted);
@@ -310,7 +423,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
             >
               {current.reviewStatus === "MoreInfoRequired" && (
                 <Field
-                  label="Reason for correction"
+                  label={t("Reason for correction")}
                   required
                   value={draft.changeReason ?? ""}
                   onChange={(e) =>
@@ -321,15 +434,17 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
               {step === 0 && (
                 <div className="form-grid">
                   <SelectField
-                    label="Title"
+                    label={t("Title")}
                     value={draft.title}
                     onChange={(e) =>
                       setDraft({ ...draft, title: e.target.value })
                     }
                   >
-                    <option value="">Select title</option>
+                    <option value="">{t("Select title")}</option>
                     {["Mr", "Ms", "Mrs", "Mx", "Dr"].map((x) => (
-                      <option key={x}>{x}</option>
+                      <option key={x} value={x}>
+                        {t(x)}
+                      </option>
                     ))}
                   </SelectField>
                   {text("firstName", "First name", "text", true)}
@@ -343,7 +458,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                   {text("state", "State / region")}
                   {text("postcode", "Postal code", "text", true)}
                   <SelectField
-                    label="Country of residence"
+                    label={t("Country of residence")}
                     value={draft.residenceCountry}
                     onChange={(e) =>
                       setDraft({ ...draft, residenceCountry: e.target.value })
@@ -354,27 +469,37 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                     ))}
                   </SelectField>
                   <SelectField
-                    label="Language"
+                    label={t("Language")}
                     value={draft.language}
                     onChange={(e) =>
                       setDraft({ ...draft, language: e.target.value })
                     }
                   >
-                    {[...new Set(["en", ...data.languages])].map((l) => (
-                      <option key={l}>{l}</option>
-                    ))}
+                    {[...new Set(["en", "zh-TW", ...data.languages])].map(
+                      (l) => (
+                        <option key={l} value={l}>
+                          {l === "zh-TW"
+                            ? "繁體中文"
+                            : l === "en"
+                              ? "English"
+                              : l}
+                        </option>
+                      ),
+                    )}
                   </SelectField>
                 </div>
               )}
               {step === 1 && (
                 <>
                   <p className="message info">
-                    Use synthetic bank details for this evaluation. No money is
-                    transferred by this form.
+                    {" "}
+                    {t(
+                      "Use synthetic bank details for this evaluation. No money is transferred by this form.",
+                    )}{" "}
                   </p>
                   <div className="form-grid">
                     <Field
-                      label="Bank country (ISO code)"
+                      label={t("Bank country (ISO code)")}
                       value={draft.bankCountry}
                       required
                       maxLength={2}
@@ -386,7 +511,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                       }
                     />
                     <SelectField
-                      label="Account holder's profile type"
+                      label={t("Account holder's profile type")}
                       value={draft.bank.accountHolderProfileType}
                       onChange={(e) =>
                         setDraft({
@@ -399,7 +524,9 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                       }
                     >
                       {["Individual", "Company"].map((s) => (
-                        <option key={s}>{s}</option>
+                        <option key={s} value={s}>
+                          {t(s)}
+                        </option>
                       ))}
                     </SelectField>
                     {(
@@ -414,7 +541,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                     ).map(([key, label]) => (
                       <Field
                         key={key}
-                        label={label}
+                        label={t(label)}
                         autoComplete="off"
                         value={draft.bank[key]}
                         onChange={(e) =>
@@ -427,8 +554,10 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                     ))}
                   </div>
                   <p className="muted">
-                    Saved account numbers are masked when retrieved. Leave a
-                    masked value unchanged to keep the stored account.
+                    {" "}
+                    {t(
+                      "Saved account numbers are masked when retrieved. Leave a masked value unchanged to keep the stored account.",
+                    )}{" "}
                   </p>
                 </>
               )}
@@ -436,7 +565,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                 <>
                   <div className="form-grid">
                     <Field
-                      label="Date of purchase"
+                      label={t("Date of purchase")}
                       type="date"
                       required
                       value={draft.purchaseDate.slice(0, 10)}
@@ -454,7 +583,9 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                       true,
                     )}
                     <Field
-                      label={`Total invoice amount (${data.currency})`}
+                      label={t("Total invoice amount ({currency})", {
+                        currency: data.currency,
+                      })}
                       type="number"
                       min="0"
                       step="0.01"
@@ -469,7 +600,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                       }
                     />
                     <Field
-                      label="Country of purchase"
+                      label={t("Country of purchase")}
                       value={draft.purchaseCountry}
                       maxLength={2}
                       required
@@ -481,14 +612,14 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                       }
                     />
                     <SelectField
-                      label="Store name / eligible retailer"
+                      label={t("Store name / eligible retailer")}
                       value={draft.retailerId}
                       required
                       onChange={(e) =>
                         setDraft({ ...draft, retailerId: e.target.value })
                       }
                     >
-                      <option value="">Select retailer</option>
+                      <option value="">{t("Select retailer")}</option>
                       {data.retailers.map((r) => (
                         <option value={r.id} key={r.id}>
                           {r.name} ({r.country})
@@ -497,7 +628,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                     </SelectField>
                   </div>
                   <hr className="section-divider" />
-                  <h3>Products on the same invoice</h3>
+                  <h3>{t("Products on the same invoice")}</h3>
                   {draft.items.map((item, i) => {
                     const product = data.products.find(
                       (p) => p.id === item.productId,
@@ -506,7 +637,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                       <div className="line-item" key={i}>
                         <div className="form-grid">
                           <SelectField
-                            label="Series"
+                            label={t("Series")}
                             value={product?.series ?? ""}
                             onChange={(e) =>
                               setDraft({
@@ -525,7 +656,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                               })
                             }
                           >
-                            <option value="">Select series</option>
+                            <option value="">{t("Select series")}</option>
                             {[
                               ...new Set(data.products.map((p) => p.series)),
                             ].map((s) => (
@@ -533,7 +664,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                             ))}
                           </SelectField>
                           <SelectField
-                            label="Eligible product"
+                            label={t("Eligible product")}
                             required
                             value={item.productId}
                             onChange={(e) =>
@@ -547,7 +678,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                               })
                             }
                           >
-                            <option value="">Select product</option>
+                            <option value="">{t("Select product")}</option>
                             {data.products.map((p) => (
                               <option key={p.id} value={p.id}>
                                 {p.series} · {p.model} ·{" "}
@@ -556,7 +687,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                             ))}
                           </SelectField>
                           <Field
-                            label="Serial number"
+                            label={t("Serial number")}
                             required
                             value={item.serialNumber}
                             onChange={(e) =>
@@ -571,7 +702,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                             }
                           />
                           <Field
-                            label="Check number (if present)"
+                            label={t("Check number (if present)")}
                             value={item.checkNumber}
                             onChange={(e) =>
                               setDraft({
@@ -585,7 +716,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                             }
                           />
                           <Field
-                            label="Product purchase date"
+                            label={t("Product purchase date")}
                             type="date"
                             value={(
                               item.purchaseDate ?? draft.purchaseDate
@@ -606,7 +737,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                             }
                           />
                           <SelectField
-                            label="Product store name"
+                            label={t("Product store name")}
                             value={item.retailerId || draft.retailerId}
                             onChange={(e) =>
                               setDraft({
@@ -619,7 +750,9 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                               })
                             }
                           >
-                            <option value="">Use invoice retailer</option>
+                            <option value="">
+                              {t("Use invoice retailer")}
+                            </option>
                             {data.retailers.map((r) => (
                               <option key={r.id} value={r.id}>
                                 {r.name} ({r.country})
@@ -627,10 +760,13 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                             ))}
                           </SelectField>
                           <div>
-                            <small>Category</small>
-                            <p>{product?.category ?? "Select a product"}</p>
+                            <small>{t("Category")}</small>
+                            <p>{product?.category ?? t("Select a product")}</p>
                             <small>
-                              Purchase details default to the shared invoice.
+                              {" "}
+                              {t(
+                                "Purchase details default to the shared invoice.",
+                              )}{" "}
                             </small>
                           </div>
                         </div>
@@ -644,7 +780,8 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                             })
                           }
                         >
-                          Remove product
+                          {" "}
+                          {t("Remove product")}{" "}
                         </button>
                       </div>
                     );
@@ -667,15 +804,18 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                       })
                     }
                   >
-                    Add product
+                    {" "}
+                    {t("Add product")}{" "}
                   </button>
                 </>
               )}
               {step === 3 && (
                 <>
                   <p>
-                    Upload JPG, PNG, PDF or TIFF evidence, up to 8 MB per file.
-                    Files are reviewed before approval.
+                    {" "}
+                    {t(
+                      "Upload JPG, PNG, PDF or TIFF evidence, up to 8 MB per file. Files are reviewed before approval.",
+                    )}{" "}
                   </p>
                   <div className="claim-upload-grid">
                     {uploadCard(
@@ -685,7 +825,11 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                     {draft.items.map((item, i) => (
                       <div key={i}>
                         {uploadCard(
-                          `Serial number image — ${data.products.find((p) => p.id === item.productId)?.model ?? "Select a product first"}`,
+                          t("Serial number image — {product}", {
+                            product:
+                              data.products.find((p) => p.id === item.productId)
+                                ?.model ?? t("Select a product first"),
+                          }),
                           "SerialNumber",
                           item.productId,
                           !item.productId,
@@ -699,12 +843,12 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                 <>
                   <section className="claim-review-block">
                     <header>
-                      <h3>Applicant</h3>
+                      <h3>{t("Applicant")}</h3>
                       {edit(0)}
                     </header>
                     <dl className="details">
                       <div>
-                        <dt>Name & email</dt>
+                        <dt>{t("Name & email")}</dt>
                         <dd>
                           {draft.title} {draft.firstName} {draft.lastName}
                           <br />
@@ -712,7 +856,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                         </dd>
                       </div>
                       <div>
-                        <dt>Contact</dt>
+                        <dt>{t("Contact")}</dt>
                         <dd>
                           {draft.phone}
                           <br />
@@ -729,63 +873,63 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                         </dd>
                       </div>
                       <div>
-                        <dt>Language</dt>
+                        <dt>{t("Language")}</dt>
                         <dd>{draft.language}</dd>
                       </div>
                     </dl>
                   </section>
                   <section className="claim-review-block">
                     <header>
-                      <h3>Payment profile</h3>
+                      <h3>{t("Payment profile")}</h3>
                       {edit(1)}
                     </header>
                     <dl className="details">
                       <div>
-                        <dt>Account holder</dt>
+                        <dt>{t("Account holder")}</dt>
                         <dd>
                           {draft.bank.accountHolder} ·{" "}
-                          {draft.bank.accountHolderProfileType}
+                          {t(draft.bank.accountHolderProfileType)}
                         </dd>
                       </div>
                       <div>
-                        <dt>Bank / country</dt>
+                        <dt>{t("Bank / country")}</dt>
                         <dd>
                           {draft.bank.bankName || "—"} · {draft.bankCountry}
                         </dd>
                       </div>
                       <div>
-                        <dt>Account</dt>
+                        <dt>{t("Account")}</dt>
                         <dd>
                           {draft.bank.iban || draft.bank.accountNumber
                             ? `•••• ${(draft.bank.iban || draft.bank.accountNumber).slice(-4)}`
-                            : "Not provided"}
+                            : t("Not provided")}
                         </dd>
                       </div>
                     </dl>
                   </section>
                   <section className="claim-review-block">
                     <header>
-                      <h3>Purchase & products</h3>
+                      <h3>{t("Purchase & products")}</h3>
                       {edit(2)}
                     </header>
                     <dl className="details">
                       <div>
-                        <dt>Invoice</dt>
+                        <dt>{t("Invoice")}</dt>
                         <dd>
                           {draft.invoiceNumber} ·{" "}
                           {draft.purchaseDate.slice(0, 10)}
                         </dd>
                       </div>
                       <div>
-                        <dt>Retailer / country</dt>
+                        <dt>{t("Retailer / country")}</dt>
                         <dd>
                           {data.retailers.find((r) => r.id === draft.retailerId)
-                            ?.name || "Not selected"}{" "}
+                            ?.name || t("Not selected")}{" "}
                           · {draft.purchaseCountry}
                         </dd>
                       </div>
                       <div>
-                        <dt>Invoice amount</dt>
+                        <dt>{t("Invoice amount")}</dt>
                         <dd>
                           {money(draft.purchaseAmountMinor, data.currency)}
                         </dd>
@@ -801,10 +945,12 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                             <strong>
                               {product
                                 ? `${product.series} · ${product.model}`
-                                : "No product selected"}
+                                : t("No product selected")}
                             </strong>
                             <p>
-                              Serial: {item.serialNumber || "Not provided"}
+                              {" "}
+                              {t("Serial:")}{" "}
+                              {item.serialNumber || t("Not provided")}
                               {item.checkNumber &&
                                 ` · Check: ${item.checkNumber}`}
                             </p>
@@ -818,7 +964,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                                 (r) =>
                                   r.id ===
                                   (item.retailerId || draft.retailerId),
-                              )?.name || "Not selected"}
+                              )?.name || t("Not selected")}
                             </small>
                           </div>
                           <strong>
@@ -830,7 +976,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                   </section>
                   <section className="claim-review-block">
                     <header>
-                      <h3>Supporting documents</h3>
+                      <h3>{t("Supporting documents")}</h3>
                       {edit(3)}
                     </header>
                     {draft.attachments.length ? (
@@ -845,22 +991,24 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                           </a>
                           <small>
                             {a.kind === "Invoice"
-                              ? "Shared invoice"
-                              : `Serial number · ${data.products.find((p) => p.id === a.productId)?.model ?? a.productId}`}{" "}
-                            · {a.scanStatus}
+                              ? t("Shared invoice")
+                              : `${t("Serial number")} · ${data.products.find((p) => p.id === a.productId)?.model ?? a.productId}`}{" "}
+                            · {t(a.scanStatus)}
                           </small>
                         </div>
                       ))
                     ) : (
-                      <p>No evidence uploaded yet.</p>
+                      <p>{t("No evidence uploaded yet.")}</p>
                     )}
                   </section>{" "}
                   <details>
-                    <summary>Terms — version {data.termsVersion}</summary>
+                    <summary>
+                      {t("Terms — version")} {data.termsVersion}
+                    </summary>
                     <p className="pre-wrap">{data.terms}</p>
                   </details>
                   <details>
-                    <summary>Privacy notice</summary>
+                    <summary>{t("Privacy notice")}</summary>
                     <p className="pre-wrap">{data.privacy}</p>
                   </details>
                   <label className="check">
@@ -871,8 +1019,8 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                       onChange={(e) =>
                         setDraft({ ...draft, termsAccepted: e.target.checked })
                       }
-                    />
-                    I accept the promotion terms.
+                    />{" "}
+                    {t("I accept the promotion terms.")}{" "}
                   </label>
                   <label className="check">
                     <input
@@ -885,8 +1033,8 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                           privacyAccepted: e.target.checked,
                         })
                       }
-                    />
-                    I acknowledge the privacy notice.
+                    />{" "}
+                    {t("I acknowledge the privacy notice.")}{" "}
                   </label>
                   <label className="check">
                     <input
@@ -898,27 +1046,35 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                           marketingAccepted: e.target.checked,
                         })
                       }
-                    />
-                    I would like to receive marketing updates (optional).
+                    />{" "}
+                    {t(
+                      "I would like to receive marketing updates (optional).",
+                    )}{" "}
                   </label>
                   <p className="muted">
-                    Eligibility and the reward are recalculated on the server
-                    when you submit.
+                    {" "}
+                    {t(
+                      "Eligibility and the reward are recalculated on the server when you submit.",
+                    )}{" "}
                   </p>
                 </>
               )}
               <div className="claim-reward-summary" aria-live="polite">
                 <div>
-                  <small>Estimated cashback</small>
+                  <small>{t("Estimated cashback")}</small>
                   <strong>{money(total, data.currency)}</strong>
                 </div>
                 <span>
-                  {selectedCount} eligible{" "}
-                  {selectedCount === 1 ? "product" : "products"} selected
+                  {t("{count} eligible products selected", {
+                    count: selectedCount,
+                  })}
                   <br />
-                  <small>Subject to eligibility review</small>
+                  <small>{t("Subject to eligibility review")}</small>
                 </span>
               </div>
+              {!pendingVersion && (
+                <ErrorNotice error={localizedError} locale={locale} />
+              )}
               <div className="actions" style={{ marginTop: 24 }}>
                 <button
                   type="button"
@@ -931,7 +1087,8 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                     })
                   }
                 >
-                  Save draft
+                  {" "}
+                  {t("Save draft")}{" "}
                 </button>
                 {step > 0 && (
                   <button
@@ -940,15 +1097,19 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                     className="button button-light"
                     onClick={() => setStep(step - 1)}
                   >
-                    Previous
+                    {" "}
+                    {t("Previous")}{" "}
                   </button>
                 )}
-                <button disabled={busy} className="button button-primary">
+                <button
+                  disabled={busy || checkingVersion || Boolean(pendingVersion)}
+                  className="button button-primary"
+                >
                   {busy
-                    ? "Saving…"
+                    ? t("Saving…")
                     : step === 4
-                      ? "Submit claim"
-                      : "Save and continue"}
+                      ? t("Submit claim")
+                      : t("Save and continue")}
                 </button>
               </div>
             </form>

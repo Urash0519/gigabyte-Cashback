@@ -316,4 +316,66 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
         associated.Data.Name.ShouldBe(originalName);
         associated.Versions.ShouldBeEmpty();
     }
+
+    private async Task<CampaignDto> RepublishWaitingDaysAsync(Guid campaignId, int days)
+    {
+        var campaign = (await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync(true))).Single(x => x.Id == campaignId);
+        campaign.Data.ConcurrencyStamp = campaign.ConcurrencyStamp;
+        campaign.Data.WaitingDays = days;
+        await WithUnitOfWorkAsync(() => _service.SaveCampaignAsync(campaign.Id, campaign.Data));
+        return await WithUnitOfWorkAsync(() => _service.PublishCampaignAsync(campaign.Id, new() { Reason = "Update waiting days" }));
+    }
+
+    [Fact]
+    public async Task Draft_should_explicitly_apply_latest_rules_preserving_input_and_supplements_stay_pinned()
+    {
+        var campaign = await PublishedCampaignAsync();
+        await RepublishWaitingDaysAsync(campaign.Id, 14);
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        draft.Data.PurchaseDate = DateTime.UtcNow.Date.AddDays(-3);
+        draft = await WithUnitOfWorkAsync(() => _service.SaveClaimAsync(draft.Id, draft.Data));
+        var bankBefore = await WithUnitOfWorkAsync(async () => (await GetRequiredService<IRepository<ClaimRecord, Guid>>().GetAsync(draft.Id)).BankCiphertext);
+        await RepublishWaitingDaysAsync(campaign.Id, 2);
+        var check = await WithUnitOfWorkAsync(() => _service.GetClaimVersionCheckAsync(draft.Id));
+        check.NeedsUpdate.ShouldBeTrue();
+        check.Campaign.Data.WaitingDays.ShouldBe(2);
+        (await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(draft.Id)))).Message.ShouldContain("newer published version");
+        var applied = await WithUnitOfWorkAsync(() => _service.ApplyClaimVersionAsync(draft.Id, new() { ExpectedLatestVersionId = check.LatestVersionId }));
+        (await WithUnitOfWorkAsync(() => _service.GetClaimVersionCheckAsync(draft.Id))).Campaign.ConcurrencyStamp.ShouldNotBe(check.Campaign.ConcurrencyStamp);
+        applied.Data.PurchaseDate.ShouldBe(draft.Data.PurchaseDate);
+        applied.Data.FirstName.ShouldBe(draft.Data.FirstName);
+        applied.Data.Items.Single().SerialNumber.ShouldBe(draft.Data.Items.Single().SerialNumber);
+        applied.Data.Attachments.Count.ShouldBe(2);
+        applied.Data.TermsAccepted.ShouldBeFalse();
+        applied.Data.PrivacyAccepted.ShouldBeFalse();
+        applied.Data.Items.Single().AmountMinor.ShouldBe(1000);
+        applied.AmountMinor.ShouldBe(0);
+        applied.History.ShouldContain(x => x.Action == "DraftCampaignVersionApplied");
+        (await WithUnitOfWorkAsync(async () => (await GetRequiredService<IRepository<ClaimRecord, Guid>>().GetAsync(draft.Id)).BankCiphertext)).ShouldBe(bankBefore);
+        applied.Data.TermsAccepted = applied.Data.PrivacyAccepted = true;
+        await WithUnitOfWorkAsync(() => _service.SaveClaimAsync(draft.Id, applied.Data));
+        var submitted = await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(draft.Id));
+        submitted.ReviewStatus.ShouldBe("Submitted");
+        await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.ApplyClaimVersionAsync(draft.Id, new() { ExpectedLatestVersionId = check.LatestVersionId })));
+        await RepublishWaitingDaysAsync(campaign.Id, 99);
+        await WithUnitOfWorkAsync(() => _service.ClaimActionAsync(draft.Id, new() { Action = "supplement", Reason = "Confirm invoice" }));
+        var supplementCheck = await WithUnitOfWorkAsync(() => _service.GetClaimVersionCheckAsync(draft.Id));
+        supplementCheck.NeedsUpdate.ShouldBeFalse();
+        supplementCheck.CurrentVersionId.ShouldBe(check.LatestVersionId);
+        (await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(draft.Id))).CampaignVersionId.ShouldBe(check.LatestVersionId);
+    }
+
+    [Fact]
+    public async Task Apply_version_should_reject_a_publication_after_the_user_checked()
+    {
+        var campaign = await PublishedCampaignAsync();
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        await RepublishWaitingDaysAsync(campaign.Id, 2);
+        var check = await WithUnitOfWorkAsync(() => _service.GetClaimVersionCheckAsync(draft.Id));
+        await RepublishWaitingDaysAsync(campaign.Id, 3);
+        (await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.ApplyClaimVersionAsync(draft.Id, new() { ExpectedLatestVersionId = check.LatestVersionId })))).Message.ShouldContain("changed again");
+        var after = await WithUnitOfWorkAsync(() => _service.GetClaimVersionCheckAsync(draft.Id));
+        after.CurrentVersionId.ShouldBe(draft.CampaignVersionId!.Value);
+        after.NeedsUpdate.ShouldBeTrue();
+    }
 }

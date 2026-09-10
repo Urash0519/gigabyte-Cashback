@@ -1,3 +1,4 @@
+import { useLocale } from "./i18n";
 import { useState } from "react";
 import {
   apiRequest,
@@ -12,6 +13,7 @@ export function BankChange({
   claim: Claim;
   onSaved: (c: Claim) => void;
 }) {
+  const { t } = useLocale();
   const [bank, setBank] = useState<Bank>({
     accountHolderProfileType: "Individual",
     accountHolder: "",
@@ -25,21 +27,22 @@ export function BankChange({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState("");
   return (
-    <Panel title="Change payment profile">
+    <Panel title={t("Change payment profile")}>
       <p className="muted">
-        Changes before authorization return the claim to review. Account details
-        are never changed on an existing payment instruction.
+        {t(
+          "Changes before authorization return the claim to review. Account details are never changed on an existing payment instruction.",
+        )}
       </p>
       <div className="form-grid">
         <SelectField
-          label="Account holder profile"
+          label={t("Account holder profile")}
           value={bank.accountHolderProfileType}
           onChange={(e) =>
             setBank({ ...bank, accountHolderProfileType: e.target.value })
           }
         >
-          <option>Individual</option>
-          <option>Company</option>
+          <option value="Individual">{t("Individual")}</option>
+          <option value="Company">{t("Company")}</option>
         </SelectField>
         {(
           [
@@ -53,7 +56,7 @@ export function BankChange({
         ).map(([k, label]) => (
           <Field
             key={k}
-            label={label}
+            label={t(label)}
             value={bank[k]}
             autoComplete="off"
             onChange={(e) => setBank({ ...bank, [k]: e.target.value })}
@@ -62,16 +65,17 @@ export function BankChange({
       </div>
       {error && (
         <p className="message error" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
       {message && (
         <p className="message" role="status">
-          {message}
+          {t(message)}
         </p>
       )}
       <ActionForm
-        label="Submit bank change"
+        reasonLabel={t("Reason / reference")}
+        label={t("Submit bank change")}
         disabled={busy}
         onSubmit={async (reason) => {
           setBusy(true);

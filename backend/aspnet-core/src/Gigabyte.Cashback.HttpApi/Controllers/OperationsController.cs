@@ -21,6 +21,8 @@ public partial class OperationsController(IOperationsAppService service) : AbpCo
     [HttpPost("campaigns/{id:guid}/publish")] public Task<CampaignDto> Publish(Guid id, ReasonInput input) => service.PublishCampaignAsync(id, input);
     [HttpGet("claims")] public Task<List<ClaimDto>> Claims(bool admin = false) => service.GetClaimsAsync(admin);
     [HttpGet("claims/{id:guid}/campaign")] public Task<CampaignDto> ClaimCampaign(Guid id) => service.GetClaimCampaignAsync(id);
+    [HttpGet("claims/{id:guid}/version-check")] public Task<ClaimVersionCheckDto> ClaimVersionCheck(Guid id) => service.GetClaimVersionCheckAsync(id);
+    [DisableAuditing, HttpPost("claims/{id:guid}/apply-version")] public Task<ClaimDto> ApplyClaimVersion(Guid id, ApplyClaimVersionInput input) => service.ApplyClaimVersionAsync(id, input);
     [DisableAuditing, HttpPost("claims")] public Task<ClaimDto> CreateClaim(ClaimInput input) => service.CreateClaimAsync(input);
     [DisableAuditing, HttpPost("claims/{id:guid}/save")] public Task<ClaimDto> SaveClaim(Guid id, ClaimInput input) => service.SaveClaimAsync(id, input);
     [HttpPost("claims/{id:guid}/submit")] public Task<ClaimDto> Submit(Guid id) => service.SubmitClaimAsync(id);

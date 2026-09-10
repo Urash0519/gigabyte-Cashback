@@ -53,10 +53,16 @@ export function TextField({
     </label>
   );
 }
-export function Badge({ children }: { children: ReactNode }) {
+export function Badge({
+  children,
+  label,
+}: {
+  children: ReactNode;
+  label?: string;
+}) {
   return (
     <span className={`badge badge-${String(children).toLowerCase()}`}>
-      {children}
+      {label ?? children}
     </span>
   );
 }
@@ -92,11 +98,13 @@ export function date(value?: string | null) {
 }
 export function ActionForm({
   label,
+  reasonLabel = "Reason / reference",
   onSubmit,
   children,
   disabled,
 }: {
   label: string;
+  reasonLabel?: string;
   onSubmit: (reason: string) => Promise<unknown>;
   children?: ReactNode;
   disabled?: boolean;
@@ -112,7 +120,7 @@ export function ActionForm({
     >
       {children}
       <Field
-        label="Reason / reference"
+        label={reasonLabel}
         value={reason}
         required
         onChange={(e) => setReason(e.target.value)}

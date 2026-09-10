@@ -1,5 +1,6 @@
 // Explicit, development-only fixture creation. Existing campaigns and claims are never deleted or overwritten.
 import assert from 'node:assert/strict';
+import { fetchWithUatAccess as fetch } from './uat-fetch.mjs';
 
 const base = process.env.CASHBACK_API_URL ?? 'http://localhost:44305';
 const slug = 'aorus-upgrade-showcase-v1';
@@ -72,4 +73,4 @@ if (campaign.publishedVersion === 0) {
 const publicCampaigns = await request('/api/operations/campaigns');
 assert.ok(publicCampaigns.some(c => c.id === campaign.id), 'Showcase must be discoverable on the public website.');
 assert.ok(!publicCampaigns.some(c => c.data.legacyFields.dataPurpose === 'integration-test'), 'Test fixtures must not be publicly listed.');
-console.log(JSON.stringify({ campaignId: campaign.id, slug, publishedVersion: campaign.publishedVersion, publicUrl: 'http://localhost:5173', purpose: 'Internal showcase; sample terms, values and retailers' }, null, 2));
+console.log(JSON.stringify({ campaignId: campaign.id, slug, publishedVersion: campaign.publishedVersion, publicUrl: process.env.CASHBACK_PUBLIC_URL ?? 'http://localhost:5173', purpose: 'Internal showcase; sample terms, values and retailers' }, null, 2));

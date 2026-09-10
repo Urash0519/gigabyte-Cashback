@@ -17,7 +17,12 @@ Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。
 
 專案 `side-project-platform`，部署帳號 `yoyo.chen@gigabyte.com`，區域 `asia-east1`。目標為 3 人約 30 分鐘測試：Cloud Run 閒置縮到 0、最多 1 實例；Cloud SQL PostgreSQL 17 `db-f1-micro`／10GB SSD／單區；附件與 Cookie 金鑰使用私有 Cloud Storage，密碼使用 Secret Manager。
 
-部署進行中，尚未宣告可使用：已建立 `cashback-uat` Artifact Registry 與專用執行身份、啟動 `cashback-uat-db` 建立及 Cloud Build。UAT 執行身份的精確 IAM 權限與秘密建立目前等待批准，尚未部署網站。現有原型與其他專案服務不變。完整資源清單、部署與測試後停用指令見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
+2026-09-10 已部署並驗證：Cloud Run `cashback-uat`、migration Job `cashback-uat-migrator`、Cloud SQL `cashback-uat-db`、Artifact Registry `cashback-uat`、兩個私有 Storage bucket、四個 Secret Manager 秘密及專用執行身份。使用 Cloud Build 建置與既有 Cloud Logging／Monitoring；沒有新增負載平衡器、NAT、Redis 或 GKE。現有原型與其他專案服務不變。完整資源與映像清單見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
+
+- [UAT 前台](https://cashback-uat-219894818230.asia-east1.run.app/)／[UAT 後台](https://cashback-uat-219894818230.asia-east1.run.app/admin/)
+- 入口帳號 `uat`；密碼由部署帳號到 [Secret Manager 的 cashback-uat-access](https://console.cloud.google.com/security/secret-manager/secret/cashback-uat-access/versions?project=side-project-platform) 查看第 1 版的值，其中 `password` 即入口密碼。不將密碼寫入 GitHub。通過入口後再按「開發環境登入」，使用模擬身份 `yoyo.chen@gigabyte.com`。
+- 使用者已批准公開可連線；所有頁面與 API 仍有入口密碼保護。3 位測試者共用模擬身份，案件會共用。UAT 使用全新雲端資料庫與展示活動，沒有複製本機個人資料。
+- 已完成 ABP migration、24 項 GCP HTTP 業務流程驗證，以及前後台／API 密碼保護與靜態資源驗證。Cloud SQL 目前開機；測試後執行 `./deploy/gcp/uat/power.ps1 -Action stop`，下次使用前執行 `-Action start`。停止 SQL 保留資料，但網站資料操作會暫停；儲存空間仍計費。
 
 ## 本機啟動
 
@@ -80,7 +85,7 @@ dotnet test Gigabyte.Cashback.slnx
 
 ## 尚未串接與正式使用界線
 
-本機驗證：前後台型別檢查及 Docker 建置通過、後端 25 項測試通過、HTTP／PostgreSQL 整合 22 項通過；瀏覽器登入及活動儲存驗證完成。詳見 [Phase 1 驗證紀錄](docs/Phase1-Verification.md)。
+驗證：前後台型別檢查及 Docker 建置通過、後端 29 項測試通過、GCP HTTP／PostgreSQL 整合 24 項通過；公開入口密碼保護與前後台資源驗證完成。初版歷史驗證見 [Phase 1 驗證紀錄](docs/Phase1-Verification.md)，最新雲端結果見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
 
 - 依本次範圍排除 Google OAuth、銀行／付款供應商 API、Webhook、真實自動付款。
 - 通知目前保存佇列、模板／處理紀錄並提供 **Simulate**，不代表已寄出；實際 SMTP／郵件供應商尚未配置。

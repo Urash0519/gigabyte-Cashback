@@ -11,6 +11,10 @@ foreach ($suffix in @('evidence','keys')) {
     $bucket = "$Project-cashback-uat-$suffix"
     Invoke-Gcp @('storage','buckets','create',"gs://$bucket",'--location=asia-east1','--uniform-bucket-level-access','--public-access-prevention')
     Invoke-Gcp @('storage','buckets','add-iam-policy-binding',"gs://$bucket","--member=serviceAccount:$runtime",'--role=roles/storage.objectAdmin','--format=none')
+    if ($suffix -eq 'evidence') {
+        # ABP checks container existence before object operations (storage.buckets.get).
+        Invoke-Gcp @('storage','buckets','add-iam-policy-binding',"gs://$bucket","--member=serviceAccount:$runtime",'--role=roles/storage.legacyBucketReader','--format=none')
+    }
 }
 # Random credentials never appear in command arguments, console output, source control or images.
 $localSecrets = Join-Path (Get-Location) '.uat-test/gcp-secrets'

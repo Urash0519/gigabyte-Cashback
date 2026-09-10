@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { fetchWithUatAccess as fetch } from './uat-fetch.mjs';
 const base=process.env.CASHBACK_API_URL??'http://localhost:44305';
 const jar=new Map();const checks=[];const stamp=Date.now().toString();
 async function request(path,body,expected=200){

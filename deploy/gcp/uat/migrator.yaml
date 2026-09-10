@@ -1,0 +1,29 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: cashback-uat-migrator
+  labels: {app: gigabyte-cashback, environment: uat}
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/cloudsql-instances: side-project-platform:asia-east1:cashback-uat-db
+    spec:
+      taskCount: 1
+      template:
+        spec:
+          serviceAccountName: cashback-uat@side-project-platform.iam.gserviceaccount.com
+          maxRetries: 0
+          timeoutSeconds: '600'
+          containers:
+            - image: asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/migrator:uat-20260910
+              resources:
+                limits: {cpu: '1', memory: 1Gi}
+              env:
+                - {name: DOTNET_ENVIRONMENT, value: Development}
+                - name: ConnectionStrings__Default
+                  valueFrom:
+                    secretKeyRef: {name: cashback-uat-db, key: '1'}
+                - name: StringEncryption__DefaultPassPhrase
+                  valueFrom:
+                    secretKeyRef: {name: cashback-uat-encryption, key: '1'}

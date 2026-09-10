@@ -1,0 +1,15 @@
+.git
+.uat-test
+.env
+.env.*
+**/node_modules
+**/bin
+**/obj
+**/dist
+**/App_Data
+**/*.pfx
+**/*.pem
+**/*.key
+**/*.log
+site
+docs

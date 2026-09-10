@@ -13,6 +13,12 @@ Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。
 - Finance：交易式 Reserved／Approved Unpaid／Paid、核放、固定付款 ID／批次、受控 CSV、人工結果及對帳；Unknown 先查核、Confirmed Failed 才可重試。
 - Reports：活動／市場／居住國／購買國／銀行國／語言／狀態／通路／產品／品類／週／月與 Hold，原幣分組，區分 Claim 與 Item，核准率與營運指標。
 
+## GCP UAT
+
+專案 `side-project-platform`，部署帳號 `yoyo.chen@gigabyte.com`，區域 `asia-east1`。目標為 3 人約 30 分鐘測試：Cloud Run 閒置縮到 0、最多 1 實例；Cloud SQL PostgreSQL 17 `db-f1-micro`／10GB SSD／單區；附件與 Cookie 金鑰使用私有 Cloud Storage，密碼使用 Secret Manager。
+
+部署進行中，尚未宣告可使用：已建立 `cashback-uat` Artifact Registry 與專用執行身份、啟動 `cashback-uat-db` 建立及 Cloud Build。UAT 執行身份的精確 IAM 權限與秘密建立目前等待批准，尚未部署網站。現有原型與其他專案服務不變。完整資源清單、部署與測試後停用指令見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
+
 ## 本機啟動
 
 Public-web 已依 Prototype 03 補齊首頁／活動主視覺、詳情搜尋與頁籤、申請摘要／附件卡片／成功頁；通路選取仍為下拉選單，My claims 維持原版。詳見 [前台對齊範圍](docs/Public-Web-Prototype-Alignment.md)。
@@ -81,7 +87,7 @@ dotnet test Gigabyte.Cashback.slnx
 - 文件檢查格式、magic bytes、8 MiB、最多 20 份及案件歸屬；安全檢查由人工 evidence check 承接，未接外部掃毒引擎。
 - 產品、會員、RMA API 與 OCR 未串接；本版使用受控設定與人工檢核。
 - 五國正式矩陣、翻譯、時區／SLA、付款人／交付檔格式、保存政策、Google 正式授權、容量及備援演練仍需正式環境核定。可配置樣本不代表已核准營運政策。
-- GCP 目錄仍為準備模板，本次不建立或部署雲端資源。GitHub push 不代表正式環境已上線。
+- `deploy/gcp/uat/` 為本次 UAT 設定；原 `deploy/gcp/cloud-run/` 保留正式部署參考模板。GitHub push 不代表 UAT 驗證已完成或正式環境上線。
 
 ## 文件與原型
 

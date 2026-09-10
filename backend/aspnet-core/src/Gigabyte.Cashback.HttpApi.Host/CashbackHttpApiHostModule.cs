@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using Microsoft.AspNetCore.Builder;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Cors;
 using Microsoft.AspNetCore.Extensions.DependencyInjection;
 using Microsoft.Extensions.Configuration;
@@ -90,6 +91,10 @@ public class CashbackHttpApiHostModule : AbpModule
             throw new InvalidOperationException("Configure StringEncryption:DefaultPassPhrase with a secret of at least 32 characters before running outside Development.");
         if (!string.IsNullOrWhiteSpace(encryptionSecret)) Configure<Volo.Abp.Security.Encryption.AbpStringEncryptionOptions>(options => options.DefaultPassPhrase = encryptionSecret);
         ConfigureBlobStorage(configuration, hostingEnvironment);
+        var keyPath = configuration["DataProtection:KeyPath"];
+        if (!string.IsNullOrWhiteSpace(keyPath))
+            context.Services.AddDataProtection().SetApplicationName("Gigabyte.Cashback")
+                .PersistKeysToFileSystem(new DirectoryInfo(keyPath));
         context.Services.AddHealthChecks();
     }
 

@@ -1,0 +1,17 @@
+FROM node:24-alpine AS build
+WORKDIR /workspace
+RUN corepack enable
+COPY frontend/package.json frontend/pnpm-workspace.yaml frontend/tsconfig.base.json frontend/pnpm-lock.yaml ./
+COPY frontend/packages ./packages
+COPY frontend/apps ./apps
+ENV VITE_API_BASE_URL=""
+ENV VITE_PUBLIC_WEB_URL="/"
+ENV VITE_ADMIN_WEB_URL="/admin/"
+RUN pnpm install --frozen-lockfile
+RUN pnpm --filter @gigabyte-cashback/public-web build
+RUN pnpm --filter @gigabyte-cashback/admin-web exec tsc -b && pnpm --filter @gigabyte-cashback/admin-web exec vite build --base=/admin/
+FROM nginx:1.29-alpine
+COPY deploy/gcp/uat/nginx.conf /etc/nginx/conf.d/default.conf
+COPY --from=build /workspace/apps/public-web/dist /usr/share/nginx/html
+COPY --from=build /workspace/apps/admin-web/dist /usr/share/nginx/html/admin
+EXPOSE 8080

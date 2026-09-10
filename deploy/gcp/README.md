@@ -1,6 +1,6 @@
 # GCP deployment preparation
 
-These files are templates for a later, explicitly approved deployment. They have not been applied.
+The original `cloud-run/` files remain production-oriented templates and have not been applied. The 2026-09-10 low-cost UAT deployment uses [uat/README.md](uat/README.md), which records its actual resource status, scope and stop/resume commands.
 
 ## Proposed GCP mapping
 

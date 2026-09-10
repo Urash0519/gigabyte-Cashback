@@ -27,23 +27,15 @@ function New-RandomSecret {
     return ([BitConverter]::ToString($bytes)).Replace('-','').ToLowerInvariant()
 }
 $dbPassword = New-RandomSecret
-$accessPassword = New-RandomSecret
-$sha = [Security.Cryptography.SHA1]::Create()
-$hash = [Convert]::ToBase64String($sha.ComputeHash([Text.Encoding]::UTF8.GetBytes($accessPassword)))
-$sha.Dispose()
 $values = @{
     'cashback-uat-db' = "Host=/cloudsql/${Project}:asia-east1:cashback-uat-db;Database=cashback;Username=cashback;Password=$dbPassword;Maximum Pool Size=10;Timeout=30"
     'cashback-uat-encryption' = New-RandomSecret
-    'cashback-uat-htpasswd' = "uat:{SHA}$hash"
-    'cashback-uat-access' = (@{username='uat';password=$accessPassword} | ConvertTo-Json -Compress)
 }
 [IO.File]::WriteAllText((Join-Path $localSecrets 'db-password'), $dbPassword)
 foreach ($name in $values.Keys) {
     $secretFile = Join-Path $localSecrets $name
     [IO.File]::WriteAllText($secretFile, $values[$name])
     Invoke-Gcp @('secrets','create',$name,'--replication-policy=user-managed','--locations=asia-east1',"--data-file=$secretFile")
-    if ($name -ne 'cashback-uat-access') {
-        Invoke-Gcp @('secrets','add-iam-policy-binding',$name,"--member=serviceAccount:$runtime",'--role=roles/secretmanager.secretAccessor','--format=none')
-    }
+    Invoke-Gcp @('secrets','add-iam-policy-binding',$name,"--member=serviceAccount:$runtime",'--role=roles/secretmanager.secretAccessor','--format=none')
 }
 Write-Output 'Buckets and secrets provisioned. Finish database user creation after instance is RUNNABLE.'

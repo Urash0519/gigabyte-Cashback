@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { useLocale } from "./i18n";
 import {
   api,
   markets,
@@ -46,6 +47,7 @@ const rate = (row: ReportRow) =>
     : row.approvalRate * 100;
 
 export function Reports({ campaigns }: { campaigns: Campaign[] }) {
+  const { t } = useLocale();
   const [report, setReport] = useState<Report>();
   const [filters, setFilters] = useState(initialFilters);
   const [applied, setApplied] = useState(initialFilters);
@@ -86,6 +88,8 @@ export function Reports({ campaigns }: { campaigns: Campaign[] }) {
     report?.rows.filter((row) => !dimension || row.dimension === dimension) ??
     [];
   const valueLabel = (row: ReportRow) => {
+    if (row.dimension === "paymentStatus" && row.value === "None")
+      return t("Not authorized");
     if (row.dimension === "campaign")
       return campaigns.find((c) => c.id === row.value)?.data.name ?? row.value;
     if (row.dimension === "product")
@@ -100,7 +104,7 @@ export function Reports({ campaigns }: { campaigns: Campaign[] }) {
           .flatMap((c) => c.data.retailers)
           .find((r) => r.id === row.value)?.name ?? row.value
       );
-    return row.value;
+    return t(row.value);
   };
   const csv = async () => {
     if (!report) return;
@@ -127,18 +131,20 @@ export function Reports({ campaigns }: { campaigns: Campaign[] }) {
     <>
       <div className="page-head">
         <div>
-          <h1>Reports</h1>
-          <p>Promotion performance, case operations and payment outcomes.</p>
+          <h1>{t("Reports")}</h1>
+          <p>
+            {t("Promotion performance, case operations and payment outcomes.")}
+          </p>
         </div>
         <button
           className="button button-light"
           disabled={!report || busy || !rows.length}
           onClick={() => void csv()}
         >
-          Export latest matching data
+          {t("Export latest matching data")}
         </button>
       </div>
-      <Panel title="Report filters">
+      <Panel title={t("Report filters")}>
         <form
           className="form-grid"
           onSubmit={(event) => {
@@ -151,11 +157,11 @@ export function Reports({ campaigns }: { campaigns: Campaign[] }) {
           }}
         >
           <SelectField
-            label="Campaign"
+            label={t("Campaign")}
             value={filters.campaignId}
             onChange={(event) => update("campaignId", event.target.value)}
           >
-            <option value="">All campaigns</option>
+            <option value="">{t("All campaigns")}</option>
             {campaigns.map((c) => (
               <option value={c.id} key={c.id}>
                 {c.data.name}
@@ -163,93 +169,97 @@ export function Reports({ campaigns }: { campaigns: Campaign[] }) {
             ))}
           </SelectField>
           <SelectField
-            label="Campaign market"
+            label={t("Campaign market")}
             value={filters.market}
             onChange={(event) => update("market", event.target.value)}
           >
-            <option value="">All markets</option>
+            <option value="">{t("All markets")}</option>
             {markets.map((m) => (
-              <option key={m}>{m}</option>
+              <option key={m} value={m}>
+                {t(m)}
+              </option>
             ))}
           </SelectField>
           <Field
-            label="Submitted from (inclusive, UTC)"
+            label={t("Submitted from (inclusive, UTC)")}
             type="date"
             value={filters.from}
             onChange={(event) => update("from", event.target.value)}
           />
           <Field
-            label="Submitted until (exclusive, UTC)"
+            label={t("Submitted until (exclusive, UTC)")}
             type="date"
             value={filters.to}
             onChange={(event) => update("to", event.target.value)}
           />
           <div>
             <button className="button button-primary" disabled={busy}>
-              {busy ? "Loading…" : "Apply filters"}
+              {t(busy ? "Loading…" : "Apply filters")}
             </button>
           </div>
         </form>
       </Panel>
       {error && (
         <p className="message error" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
-      <Panel title="Grouped results">
+      <Panel title={t("Grouped results")}>
         <div className="toolbar">
           <SelectField
-            label="Dimension"
+            label={t("Dimension")}
             value={dimension}
             onChange={(event) => setDimension(event.target.value)}
           >
-            <option value="">All dimensions</option>
+            <option value="">{t("All dimensions")}</option>
             {dimensions.map((d) => (
               <option key={d} value={d}>
-                {labels[d] ?? d}
+                {t(labels[d] ?? d)}
               </option>
             ))}
           </SelectField>
         </div>
         <p className="muted">
-          Date basis: {report?.dateBasis ?? "SubmittedAt"} · Time zone:{" "}
-          {report?.timeZone ?? "UTC"} · Generated {date(report?.generatedAt)}
+          {t("Date basis")}: {t(report?.dateBasis ?? "SubmittedAt")} ·{" "}
+          {t("Time zone")}: {report?.timeZone ?? "UTC"} · {t("Generated")}{" "}
+          {date(report?.generatedAt)}
         </p>
         <p className="muted">
-          Applied scope:{" "}
+          {t("Applied scope")}:{" "}
           {campaigns.find((c) => c.id === applied.campaignId)?.data.name ??
-            "All campaigns"}{" "}
-          · {applied.market || "All markets"} · {applied.from || "Beginning"}{" "}
-          inclusive → {applied.to || "No end"} exclusive.
+            t("All campaigns")}{" "}
+          · {t(applied.market || "All markets")} ·{" "}
+          {applied.from || t("Beginning")} {t("inclusive")} →{" "}
+          {applied.to || t("No end")} {t("exclusive")}.
         </p>
         <div className="table-wrap" aria-busy={busy}>
           <table>
             <thead>
               <tr>
-                <th>Dimension</th>
-                <th>Value</th>
-                <th>Currency</th>
-                <th>Claims</th>
-                <th>Items</th>
-                <th>Claimed amount</th>
-                <th>Approved</th>
-                <th>Rejected</th>
-                <th>Approval rate</th>
-                <th>Paid claims</th>
-                <th>On hold</th>
-                <th>SLA overdue</th>
-                <th>First review overdue</th>
-                <th>Supplement rate</th>
-                <th>Avg review days</th>
-                <th>Median review days</th>
-                <th>Avg payment days</th>
-                <th>Median payment days</th>
+                <th>{t("Dimension")}</th>
+                <th>{t("Value")}</th>
+                <th>{t("Currency")}</th>
+                <th>{t("Claim count")}</th>
+                <th>{t("Items")}</th>
+                <th>{t("Claimed amount")}</th>
+                <th>{t("Approved")}</th>
+                <th>{t("Rejected")}</th>
+                <th>{t("Approval rate")}</th>
+                <th>{t("Paid claims")}</th>
+                <th>{t("On hold")}</th>
+                <th>{t("SLA overdue")}</th>
+                <th>{t("First review overdue")}</th>
+                <th>{t("Supplement rate")}</th>
+                <th>{t("Avg review days")}</th>
+                <th>{t("Median review days")}</th>
+                <th>{t("Avg payment days")}</th>
+                <th>{t("Median payment days")}</th>
               </tr>
             </thead>
             <tbody>
               {rows.map((row) => (
                 <tr key={`${row.dimension}:${row.value}:${row.currency}`}>
-                  <td>{labels[row.dimension] ?? row.dimension}</td>
+                  <td>{t(labels[row.dimension] ?? row.dimension)}</td>
                   <td>{valueLabel(row)}</td>
                   <td>{row.currency}</td>
                   <td>{row.claims}</td>
@@ -283,21 +293,17 @@ export function Reports({ campaigns }: { campaigns: Campaign[] }) {
           </table>
         </div>
         {!rows.length && !busy && (
-          <Empty>No submitted cases match the filters.</Empty>
+          <Empty>{t("No submitted cases match the filters.")}</Empty>
         )}
         <p className="heading-note">
-          Approval rate = approved ÷ (approved + rejected). No decisions
-          displays —. Claims count distinct applications; items count products.
-          Currencies stay separate. Groups overlap and must not be summed into a
-          grand total. CSV amounts use minor units. Export queries the latest
-          matching data and records an audit event.
+          {t(
+            "Approval rate = approved ÷ (approved + rejected). No decisions displays —. Claims count distinct applications; items count products. Currencies stay separate. Groups overlap and must not be summed into a grand total. CSV amounts use minor units. Export queries the latest matching data and records an audit event.",
+          )}
         </p>
         <p className="heading-note">
-          Cycle times use elapsed calendar days: submission to final review
-          decision, and authorization to confirmed payment. Missing events
-          display —. Supplement rate counts cases that ever required more
-          information. First review overdue counts open cases with no review
-          action beyond the configured review SLA (default 7 days).
+          {t(
+            "Cycle times use elapsed calendar days: submission to final review decision, and authorization to confirmed payment. Missing events display —. Supplement rate counts cases that ever required more information. First review overdue counts open cases with no review action beyond the configured review SLA (default 7 days).",
+          )}
         </p>
       </Panel>
     </>

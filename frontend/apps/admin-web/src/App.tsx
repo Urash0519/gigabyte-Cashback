@@ -14,6 +14,7 @@ import { Claims } from "./Claims";
 import { Payments } from "./Payments";
 import { Reports } from "./Reports";
 import { Notifications } from "./Notifications";
+import { useLocale } from "./i18n";
 const tabs = [
   "Overview",
   "Campaigns",
@@ -24,6 +25,7 @@ const tabs = [
   "Audit",
 ];
 export function App() {
+  const { locale, setLocale, t } = useLocale();
   const [session, setSession] = useState<Session>();
   const [tab, setTab] = useState("Overview");
   const [campaigns, setCampaigns] = useState<Campaign[]>([]);
@@ -71,15 +73,29 @@ export function App() {
   return (
     <>
       <div className="uat-banner">
-        Internal evaluation · sample data only · bank API and Google sign-in are
-        not connected
+        {t(
+          "Internal evaluation · sample data only · bank API and Google sign-in are not connected",
+        )}{" "}
       </div>
       <header className="topbar">
         <div className="brand">
-          GIGABYTE <small>CASHBACK ADMIN</small>
+          GIGABYTE <small>{t("CASHBACK ADMIN")}</small>
         </div>
         <nav>
-          <a href={urls.public}>Consumer site ↗</a>
+          <label className="admin-language">
+            <span>{t("Interface language")}</span>
+            <select
+              aria-label={t("Interface language")}
+              value={locale}
+              onChange={(e) =>
+                setLocale(e.target.value === "zh-TW" ? "zh-TW" : "en")
+              }
+            >
+              <option value="en">English</option>
+              <option value="zh-TW">繁體中文</option>
+            </select>
+          </label>
+          <a href={urls.public}>{t("Consumer site ↗")}</a>
           {logged && (
             <>
               <span className="identity">{session?.email}</span>
@@ -92,7 +108,7 @@ export function App() {
                   }, "Signed out.")
                 }
               >
-                Sign out
+                {t("Sign out")}{" "}
               </button>
             </>
           )}
@@ -102,13 +118,15 @@ export function App() {
         <main className="public-main">
           {error && (
             <p className="message error" role="alert">
-              {error}
+              {t(error)}
             </p>
           )}
           <section className="panel login-panel">
-            <Badge>Development access</Badge>
-            <h1 style={{ marginTop: 20 }}>Promotion operations</h1>
-            <p>Manage campaigns, review claims and reconcile payments.</p>
+            <Badge>{t("Development access")}</Badge>
+            <h1 style={{ marginTop: 20 }}>{t("Promotion operations")}</h1>
+            <p>
+              {t("Manage campaigns, review claims and reconcile payments.")}
+            </p>
             <button
               disabled={busy}
               className="button button-primary"
@@ -119,43 +137,45 @@ export function App() {
                 }, "Signed in with the development identity.")
               }
             >
-              {busy ? "Signing in…" : "Sign in for development"}
+              {busy ? t("Signing in…") : t("Sign in for development")}
             </button>
             <small>yoyo.chen@gigabyte.com</small>
-            <small>Google sign-in will replace this development button.</small>
+            <small>
+              {t("Google sign-in will replace this development button.")}
+            </small>
           </section>
         </main>
       ) : (
         <div className="workspace">
           <aside className="sidebar">
-            <small>Workspace</small>
-            {tabs.map((t) => (
+            <small>{t("Workspace")}</small>
+            {tabs.map((tabName) => (
               <button
-                key={t}
-                className={tab === t ? "active" : ""}
+                key={tabName}
+                className={tab === tabName ? "active" : ""}
                 onClick={() => {
-                  setTab(t);
+                  setTab(tabName);
                   setMessage("");
                 }}
               >
-                {t}
+                {t(tabName)}
               </button>
             ))}
           </aside>
           <main className="workspace-main">
             {error && (
               <p className="message error" role="alert">
-                {error}
+                {t(error)}
               </p>
             )}
             {message && (
               <p className="message" role="status">
-                {message}
+                {t(message)}
               </p>
             )}
             {busy && (
               <p role="status" className="muted">
-                Saving / loading…
+                {t("Saving / loading…")}{" "}
               </p>
             )}
             {tab === "Campaigns" && (
@@ -190,9 +210,11 @@ export function App() {
               <>
                 <div className="page-head">
                   <div>
-                    <h1>Operations overview</h1>
+                    <h1>{t("Operations overview")}</h1>
                     <p>
-                      Current workload and commitments across your campaigns.
+                      {t(
+                        "Current workload and commitments across your campaigns.",
+                      )}{" "}
                     </p>
                   </div>
                   <button
@@ -200,7 +222,7 @@ export function App() {
                     disabled={busy}
                     onClick={() => void run(reload, "Overview refreshed.")}
                   >
-                    Refresh
+                    {t("Refresh")}{" "}
                   </button>
                 </div>
                 <div className="metrics">
@@ -240,23 +262,23 @@ export function App() {
                         )
                       }
                     >
-                      <span>{label}</span>
+                      <span>{t(String(label))}</span>
                       <strong>{count}</strong>
                     </button>
                   ))}
                 </div>
-                <Panel title="Campaign budgets">
+                <Panel title={t("Campaign budgets")}>
                   <div className="table-wrap">
                     <table>
                       <thead>
                         <tr>
-                          <th>Campaign</th>
-                          <th>Budget</th>
-                          <th>Buffer</th>
-                          <th>Reserved</th>
-                          <th>Approved unpaid</th>
-                          <th>Paid</th>
-                          <th>Available</th>
+                          <th>{t("Campaign")}</th>
+                          <th>{t("Budget")}</th>
+                          <th>{t("Buffer")}</th>
+                          <th>{t("Reserved")}</th>
+                          <th>{t("Approved unpaid")}</th>
+                          <th>{t("Paid")}</th>
+                          <th>{t("Available")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -265,7 +287,9 @@ export function App() {
                             <td>
                               {c.data.name}
                               <br />
-                              <Badge>{c.data.status}</Badge>
+                              <Badge label={t(c.data.status)}>
+                                {c.data.status}
+                              </Badge>
                             </td>
                             {[
                               c.data.budgetMinor,
@@ -285,14 +309,14 @@ export function App() {
                     </table>
                   </div>
                   {!campaigns.length && (
-                    <Empty>Create a campaign to begin.</Empty>
+                    <Empty>{t("Create a campaign to begin.")}</Empty>
                   )}
                 </Panel>
-                <Panel title="Recent activity">
+                <Panel title={t("Recent activity")}>
                   <ol className="timeline">
                     {events.slice(0, 8).map((e) => (
                       <li key={e.id}>
-                        <b>{e.action}</b>
+                        <b>{t(e.action)}</b>
                         <p>{e.reason}</p>
                         <time>
                           {date(e.createdAt)} · {e.actor}
@@ -307,26 +331,30 @@ export function App() {
               <>
                 <div className="page-head">
                   <div>
-                    <h1>Audit trail</h1>
-                    <p>Recorded business operations, reasons and identities.</p>
+                    <h1>{t("Audit trail")}</h1>
+                    <p>
+                      {t(
+                        "Recorded business operations, reasons and identities.",
+                      )}
+                    </p>
                   </div>
                   <button
                     className="button button-light"
                     onClick={() => void run(reload, "Audit refreshed.")}
                   >
-                    Refresh
+                    {t("Refresh")}{" "}
                   </button>
                 </div>
-                <Panel title="Business events">
+                <Panel title={t("Business events")}>
                   <div className="table-wrap">
                     <table>
                       <thead>
                         <tr>
-                          <th>UTC timestamp</th>
-                          <th>Actor</th>
-                          <th>Action</th>
-                          <th>Target</th>
-                          <th>Reason</th>
+                          <th>{t("UTC timestamp")}</th>
+                          <th>{t("Actor")}</th>
+                          <th>{t("Action")}</th>
+                          <th>{t("Target")}</th>
+                          <th>{t("Reason")}</th>
                         </tr>
                       </thead>
                       <tbody>
@@ -334,7 +362,7 @@ export function App() {
                           <tr key={e.id}>
                             <td>{date(e.createdAt)}</td>
                             <td>{e.actor}</td>
-                            <td>{e.action}</td>
+                            <td>{t(e.action)}</td>
                             <td>
                               <code>{e.targetId}</code>
                             </td>
@@ -344,14 +372,18 @@ export function App() {
                       </tbody>
                     </table>
                   </div>
-                  {!events.length && <Empty>No recorded activity.</Empty>}
+                  {!events.length && (
+                    <Empty>{t("No recorded activity.")}</Empty>
+                  )}
                 </Panel>
               </>
             )}
           </main>
         </div>
       )}
-      <footer className="footer">GIGABYTE Cashback · Phase 1 operations</footer>
+      <footer className="footer">
+        {t("GIGABYTE Cashback · Phase 1 operations")}
+      </footer>
     </>
   );
 }

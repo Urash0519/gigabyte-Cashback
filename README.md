@@ -6,6 +6,7 @@ Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。
 
 - 未送出草稿在開啟與送出前檢查最新發布版本，提示確認後保留資料與附件套用，並重新確認條款／隱私同意；已送出及補件案件保持送出時版本。
 - 前台提供 English／繁體中文切換並記住選擇；申請語言可選繁體中文。活動名稱、產品及條款原文仍依後台設定呈現。送出錯誤顯示於操作按鈕旁，自動捲動並聚焦提示。詳見 [草稿版本與語系](docs/Draft-Version-and-Language.md)。
+- 後台提供獨立 English／繁體中文切換，涵蓋總覽、活動、申請、付款、報表、通知、稽核與更正歷程；重新整理會保留語系。欄位值、狀態代碼及使用者輸入不因切換而變動。
 - Campaign：建立、複製、編輯、發布不可變版本、比較；舊站名稱／類型／期間／國家與狀態分類，產品／系列／金額、通路有效期、內容、限制與預算設定。
 - Claims：伺服器 Draft、完整個人／地址／銀行欄位、同發票多產品、產品日期／通路、文件上傳、同意版本、伺服器金額計算、序號與人／戶／活動互斥規則。
 - Tracker／客服：本人案件、補件更正、歷史版本、取消請求、案件訊息與受控銀行更改。
@@ -20,9 +21,9 @@ Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。
 2026-09-10 已部署並驗證：Cloud Run `cashback-uat`、migration Job `cashback-uat-migrator`、Cloud SQL `cashback-uat-db`、Artifact Registry `cashback-uat`、兩個私有 Storage bucket、四個 Secret Manager 秘密及專用執行身份。使用 Cloud Build 建置與既有 Cloud Logging／Monitoring；沒有新增負載平衡器、NAT、Redis 或 GKE。現有原型與其他專案服務不變。完整資源與映像清單見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
 
 - [UAT 前台](https://cashback-uat-219894818230.asia-east1.run.app/)／[UAT 後台](https://cashback-uat-219894818230.asia-east1.run.app/admin/)
-- 入口帳號 `uat`；密碼由部署帳號到 [Secret Manager 的 cashback-uat-access](https://console.cloud.google.com/security/secret-manager/secret/cashback-uat-access/versions?project=side-project-platform) 查看第 1 版的值，其中 `password` 即入口密碼。不將密碼寫入 GitHub。通過入口後再按「開發環境登入」，使用模擬身份 `yoyo.chen@gigabyte.com`。
-- 使用者已批准公開可連線；所有頁面與 API 仍有入口密碼保護。3 位測試者共用模擬身份，案件會共用。UAT 使用全新雲端資料庫與展示活動，沒有複製本機個人資料。
-- 已完成 ABP migration、24 項 GCP HTTP 業務流程驗證，以及前後台／API 密碼保護與靜態資源驗證。Cloud SQL 目前開機；測試後執行 `./deploy/gcp/uat/power.ps1 -Action stop`，下次使用前執行 `-Action start`。停止 SQL 保留資料，但網站資料操作會暫停；儲存空間仍計費。
+- 依使用者最新決策，UAT 移除入口密碼，任何人可直接開啟前後台，再按「開發環境登入」使用模擬身份 `yoyo.chen@gigabyte.com`。不需要 Google 帳號或 UAT 密碼。
+- 所有人共用模擬身份與案件，任何訪客都能透過按鈕取得測試後台操作權限。此為明確選擇的公開 UAT 行為，僅使用測試資料；正式登入與銀行 API 仍未串接。Cloud SQL、Storage 與加密秘密仍透過原有服務身份存取。
+- 已完成 ABP migration 與 24 項 GCP HTTP 業務流程驗證。Cloud SQL 目前開機；測試後執行 `./deploy/gcp/uat/power.ps1 -Action stop`，下次使用前執行 `-Action start`。停止 SQL 保留資料，但網站資料操作會暫停；儲存空間仍計費。
 
 ## 本機啟動
 
@@ -85,7 +86,7 @@ dotnet test Gigabyte.Cashback.slnx
 
 ## 尚未串接與正式使用界線
 
-驗證：前後台型別檢查及 Docker 建置通過、後端 29 項測試通過、GCP HTTP／PostgreSQL 整合 24 項通過；公開入口密碼保護與前後台資源驗證完成。初版歷史驗證見 [Phase 1 驗證紀錄](docs/Phase1-Verification.md)，最新雲端結果見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
+驗證：前後台型別檢查及 Docker 建置通過、既有後端 29 項測試通過、GCP HTTP／PostgreSQL 整合 24 項通過；新版免密碼入口、後台中文切換／偏好記憶／未儲存內容保留與前後台資源驗證完成。初版歷史驗證見 [Phase 1 驗證紀錄](docs/Phase1-Verification.md)，最新雲端結果見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
 
 - 依本次範圍排除 Google OAuth、銀行／付款供應商 API、Webhook、真實自動付款。
 - 通知目前保存佇列、模板／處理紀錄並提供 **Simulate**，不代表已寄出；實際 SMTP／郵件供應商尚未配置。

@@ -1,3 +1,4 @@
+import { useLocale } from "./i18n";
 import { useEffect, useState } from "react";
 import {
   financeApi,
@@ -25,19 +26,20 @@ export function Batches({
   run: (fn: () => Promise<unknown>, message: string) => Promise<void>;
   reload: () => Promise<void>;
 }) {
+  const { t } = useLocale();
   const [id, setId] = useState("");
   const [reference, setReference] = useState("");
   const batches = [...new Set(payments.map((p) => p.batchId))];
   return (
-    <Panel title="Batch delivery">
+    <Panel title={t("Batch delivery")}>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>Batch ID</th>
-              <th>Instructions</th>
-              <th>Totals by currency</th>
-              <th>Delivery</th>
+              <th>{t("Batch ID")}</th>
+              <th>{t("Instructions")}</th>
+              <th>{t("Totals by currency")}</th>
+              <th>{t("Delivery")}</th>
             </tr>
           </thead>
           <tbody>
@@ -67,7 +69,7 @@ export function Batches({
                         className="button button-light"
                         href={financeApi.batchExport(batchId)}
                       >
-                        CSV + manifest ZIP
+                        {t("CSV + manifest ZIP")}{" "}
                       </a>
                       <button
                         className="button button-light"
@@ -76,7 +78,7 @@ export function Batches({
                         }
                         onClick={() => setId(batchId)}
                       >
-                        Record batch delivery
+                        {t("Record batch delivery")}{" "}
                       </button>
                     </div>
                   </td>
@@ -86,17 +88,20 @@ export function Batches({
           </tbody>
         </table>
       </div>
-      {!batches.length && <Empty>No batches yet.</Empty>}
+      {!batches.length && <Empty>{t("No batches yet.")}</Empty>}
       {id && (
         <>
-          <h3>Deliver batch {id}</h3>
+          <h3>
+            {t("Deliver batch")} {id}
+          </h3>
           <Field
-            label="Delivery reference"
+            label={t("Delivery reference")}
             value={reference}
             onChange={(e) => setReference(e.target.value)}
           />
           <ActionForm
-            label="Mark original instructions submitted"
+            reasonLabel={t("Reason / reference")}
+            label={t("Mark original instructions submitted")}
             disabled={busy || !reference}
             onSubmit={(reason) =>
               run(async () => {
@@ -107,7 +112,7 @@ export function Batches({
                 });
                 setId("");
                 await reload();
-              }, "Batch delivery recorded. No bank API was called.")
+              }, t("Batch delivery recorded. No bank API was called."))
             }
           />
         </>
@@ -122,6 +127,7 @@ export function FinanceHistory({
   paymentId?: string;
   refreshKey: string;
 }) {
+  const { t } = useLocale();
   const [rows, setRows] = useState<Reconciliation[]>([]);
   const [attempts, setAttempts] = useState<PaymentAttempt[]>([]);
   const [error, setError] = useState("");
@@ -148,35 +154,37 @@ export function FinanceHistory({
   return (
     <>
       {paymentId && (
-        <Panel title="Payment attempts">
+        <Panel title={t("Payment attempts")}>
           <ol className="timeline">
             {attempts.map((a) => (
               <li key={a.id}>
                 <b>
-                  Attempt {a.number} · <Badge>{a.status}</Badge>
+                  {t("Attempt")} {a.number}
+                  {t("·")} <Badge label={t(a.status)}>{a.status}</Badge>
                 </b>
                 <p>{a.reason}</p>
                 <small>
-                  {a.reference} · {date(a.createdAt)}
+                  {a.reference}
+                  {t("·")} {date(a.createdAt)}
                 </small>
               </li>
             ))}
           </ol>
         </Panel>
       )}
-      <Panel title="Reconciliation receipts">
-        {error && <p className="message error">{error}</p>}
+      <Panel title={t("Reconciliation receipts")}>
+        {error && <p className="message error">{t(error)}</p>}
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Timestamp</th>
-                <th>External payment ID</th>
-                <th>Reference</th>
-                <th>Amount</th>
-                <th>Result</th>
-                <th>Match status</th>
-                <th>Reason</th>
+                <th>{t("Timestamp")}</th>
+                <th>{t("External payment ID")}</th>
+                <th>{t("Reference")}</th>
+                <th>{t("Amount")}</th>
+                <th>{t("Result")}</th>
+                <th>{t("Match status")}</th>
+                <th>{t("Reason")}</th>
               </tr>
             </thead>
             <tbody>
@@ -188,9 +196,9 @@ export function FinanceHistory({
                   </td>
                   <td>{r.reference}</td>
                   <td>{money(r.amountMinor, r.currency)}</td>
-                  <td>{r.result}</td>
+                  <td>{t(r.result)}</td>
                   <td>
-                    <Badge>{r.matchStatus}</Badge>
+                    <Badge label={t(r.matchStatus)}>{r.matchStatus}</Badge>
                   </td>
                   <td>{r.reason}</td>
                 </tr>
@@ -200,8 +208,9 @@ export function FinanceHistory({
         </div>
         {!rows.length && (
           <Empty>
-            No result receipts. Unmatched IDs and mismatched amounts are
-            retained here for investigation.
+            {t(
+              "No result receipts. Unmatched IDs and mismatched amounts are retained here for investigation.",
+            )}{" "}
           </Empty>
         )}
       </Panel>

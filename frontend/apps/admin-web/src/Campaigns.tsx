@@ -1,11 +1,44 @@
+import { useLocale } from "./i18n";
 import { useState } from "react";
 
 const extraLabels: Record<string, string> = {
-  reviewSlaDays: "Review SLA (days)", supplementSlaDays: "Supplement SLA (days)",
-  paymentSlaDays: "Payment SLA (days)", maxClaimsPerHousehold: "Claims per household",
-  exclusivityGroup: "Mutually exclusive campaign group", owner: "Campaign owner",
-  costCenter: "Cost center", year: "Campaign year", quarter: "Campaign quarter",
-  privacyVersion: "Privacy notice version", notificationTemplateVersion: "Notification template version",
+  id: "Retailer ID",
+  name: "Name",
+  country: "Country",
+  url: "URL",
+  series: "Series",
+  category: "Category",
+  model: "Model",
+  ean: "EAN",
+  description: "Description",
+  terms: "Terms",
+  privacy: "Privacy notice",
+  faq: "FAQs",
+  markets: "Markets",
+  languages: "Languages",
+  currency: "Currency",
+  purchaseStart: "Purchase start",
+  purchaseEnd: "Purchase end",
+  claimStart: "Claim start",
+  claimEnd: "Claim end",
+  waitingDays: "Waiting days",
+  budgetMinor: "Budget (minor units)",
+  bufferMinor: "Buffer (minor units)",
+  claimLimit: "Claim capacity",
+  termsVersion: "Terms version",
+  products: "Products",
+  retailers: "Retailers",
+  reviewSlaDays: "Review SLA (days)",
+  supplementSlaDays: "Supplement SLA (days)",
+  paymentSlaDays: "Payment SLA (days)",
+  maxClaimsPerHousehold: "Claims per household",
+  exclusivityGroup: "Mutually exclusive campaign group",
+  owner: "Campaign owner",
+  costCenter: "Cost center",
+  year: "Campaign year",
+  quarter: "Campaign quarter",
+  privacyVersion: "Privacy notice version",
+  notificationTemplateVersion: "Notification template version",
 };
 import {
   api,
@@ -31,6 +64,7 @@ type Props = {
   busy: boolean;
 };
 export function Campaigns({ campaigns, run, reload, busy }: Props) {
+  const { t } = useLocale();
   const [editing, setEditing] = useState<Campaign | "new" | null>(null);
   const [draft, setDraft] = useState<CampaignInput>(blankCampaign);
   const [status, setStatus] = useState("All");
@@ -49,7 +83,7 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
   const field = (key: keyof CampaignInput, label: string, type = "text") => (
     <Field
       key={key}
-      label={label}
+      label={t(label)}
       type={type}
       value={String(draft[key])}
       onChange={(e) =>
@@ -71,38 +105,44 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
     <>
       <div className="page-head">
         <div>
-          <h1>Campaigns</h1>
-          <p>Configure promotions, publish versions and monitor commitments.</p>
+          <h1>{t("Campaigns")}</h1>
+          <p>
+            {t(
+              "Configure promotions, publish versions and monitor commitments.",
+            )}
+          </p>
         </div>
         <button
           className="button button-primary"
           disabled={busy}
           onClick={() => edit("new")}
         >
-          Create campaign
+          {" "}
+          {t("Create campaign")}{" "}
         </button>
       </div>
       {editing ? (
         <Panel
-          title={editing === "new" ? "New campaign" : draft.name}
+          title={editing === "new" ? t("New campaign") : draft.name}
           actions={
             <button
               className="button button-light"
               onClick={() => setEditing(null)}
             >
-              Back to campaigns
+              {" "}
+              {t("Back to campaigns")}{" "}
             </button>
           }
         >
           <div className="tabs">
             {["Details", "Products", "Retailers", "Content", "Versions"].map(
-              (t) => (
+              (tabName) => (
                 <button
-                  key={t}
-                  className={tab === t ? "active" : ""}
-                  onClick={() => setTab(t)}
+                  key={tabName}
+                  className={tab === tabName ? "active" : ""}
+                  onClick={() => setTab(tabName)}
                 >
-                  {t}
+                  {t(tabName)}
                 </button>
               ),
             )}
@@ -130,18 +170,20 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                 {field("slug", "Public URL slug")}
                 {field("type", "Promotion type")}
                 <SelectField
-                  label="Administrative status"
+                  label={t("Administrative status")}
                   value={draft.status}
                   onChange={(e) =>
                     setDraft({ ...draft, status: e.target.value })
                   }
                 >
                   {["Draft", "Active", "Confirmed", "Archived"].map((s) => (
-                    <option key={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {t(s)}
+                    </option>
                   ))}
                 </SelectField>
                 <Field
-                  label="Countries (comma-separated ISO codes)"
+                  label={t("Countries (comma-separated ISO codes)")}
                   value={draft.markets.join(",")}
                   onChange={(e) =>
                     setDraft({
@@ -155,7 +197,7 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                   }
                 />
                 <Field
-                  label="Languages (comma-separated)"
+                  label={t("Languages (comma-separated)")}
                   value={draft.languages.join(",")}
                   onChange={(e) =>
                     setDraft({
@@ -176,14 +218,14 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                 ).map((key, i) => (
                   <Field
                     key={key}
-                    label={
+                    label={t(
                       [
                         "Purchase from (UTC)",
                         "Purchase until (UTC)",
                         "Claims from (UTC)",
                         "Claims until (UTC)",
-                      ][i]
-                    }
+                      ][i],
+                    )}
                     type="datetime-local"
                     value={draft[key].slice(0, 16)}
                     required
@@ -199,7 +241,12 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                 {(["budgetMinor", "bufferMinor"] as const).map((key) => (
                   <Field
                     key={key}
-                    label={`${key === "budgetMinor" ? "Budget" : "Buffer"} (${draft.currency})`}
+                    label={t(
+                      key === "budgetMinor"
+                        ? "Budget ({currency})"
+                        : "Buffer ({currency})",
+                      { currency: draft.currency },
+                    )}
                     type="number"
                     min="0"
                     step="0.01"
@@ -227,7 +274,7 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                 ].map((key) => (
                   <Field
                     key={key}
-                    label={extraLabels[key] ?? key}
+                    label={t(extraLabels[key] ?? key)}
                     value={draft.legacyFields[key] ?? ""}
                     onChange={(e) =>
                       setDraft({
@@ -247,16 +294,20 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                     onChange={(e) =>
                       setDraft({ ...draft, acceptingClaims: e.target.checked })
                     }
-                  />
-                  Accept new claims (subject to periods and remaining budget)
+                  />{" "}
+                  {t(
+                    "Accept new claims (subject to periods and remaining budget)",
+                  )}{" "}
                 </label>
               </div>
             )}
             {tab === "Products" && (
               <>
                 <p className="muted">
-                  Eligible products and rewards are captured in each published
-                  version.
+                  {" "}
+                  {t(
+                    "Eligible products and rewards are captured in each published version.",
+                  )}{" "}
                 </p>
                 {draft.products.map((p, i) => (
                   <div className="line-item" key={i}>
@@ -266,7 +317,11 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                       ).map((key) => (
                         <Field
                           key={key}
-                          label={key === "id" ? "Product ID / SKU" : key}
+                          label={t(
+                            key === "id"
+                              ? "Product ID / SKU"
+                              : (extraLabels[key] ?? key),
+                          )}
                           required={
                             key === "id" ||
                             key === "model" ||
@@ -284,7 +339,9 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                         />
                       ))}
                       <Field
-                        label={`Cashback (${draft.currency})`}
+                        label={t("Cashback ({currency})", {
+                          currency: draft.currency,
+                        })}
                         type="number"
                         min="0"
                         step="0.01"
@@ -306,7 +363,7 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                         }
                       />
                       <Field
-                        label="Quantity limit"
+                        label={t("Quantity limit")}
                         type="number"
                         min="1"
                         value={p.quantityLimit}
@@ -335,7 +392,8 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                         })
                       }
                     >
-                      Remove product
+                      {" "}
+                      {t("Remove product")}{" "}
                     </button>
                   </div>
                 ))}
@@ -360,7 +418,8 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                     })
                   }
                 >
-                  Add product
+                  {" "}
+                  {t("Add product")}{" "}
                 </button>
               </>
             )}
@@ -373,7 +432,7 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                         (key) => (
                           <Field
                             key={key}
-                            label={extraLabels[key] ?? key}
+                            label={t(extraLabels[key] ?? key)}
                             value={p[key]}
                             onChange={(e) =>
                               setDraft({
@@ -389,7 +448,11 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                       {(["validFrom", "validTo"] as const).map((key) => (
                         <Field
                           key={key}
-                          label={`${key} (UTC)`}
+                          label={t(
+                            key === "validFrom"
+                              ? "Valid from (UTC)"
+                              : "Valid until (UTC)",
+                          )}
                           type="date"
                           value={p[key]?.slice(0, 10) ?? ""}
                           onChange={(e) =>
@@ -420,7 +483,8 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                         })
                       }
                     >
-                      Remove retailer
+                      {" "}
+                      {t("Remove retailer")}{" "}
                     </button>
                   </div>
                 ))}
@@ -444,7 +508,8 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                     })
                   }
                 >
-                  Add retailer
+                  {" "}
+                  {t("Add retailer")}{" "}
                 </button>
               </>
             )}
@@ -457,7 +522,7 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                   (key) => (
                     <TextField
                       key={key}
-                      label={extraLabels[key] ?? key}
+                      label={t(extraLabels[key] ?? key)}
                       value={draft[key]}
                       onChange={(value) => setDraft({ ...draft, [key]: value })}
                     />
@@ -467,17 +532,24 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
             )}
             {tab === "Versions" &&
               (editing === "new" ? (
-                <Empty>Save the draft before publishing a version.</Empty>
+                <Empty>
+                  {t("Save the draft before publishing a version.")}
+                </Empty>
               ) : (
                 <>
                   <p>
-                    Published version: {editing.publishedVersion}. Existing
-                    claims retain their submitted version.
+                    {t(
+                      "Published version: {version}. Submitted claims retain their original version; drafts can apply the latest published rules.",
+                      { version: editing.publishedVersion },
+                    )}
                   </p>
                   {editing.versions.map((v) => (
                     <details key={v.id}>
                       <summary>
-                        Version {v.version} · {v.createdAt}
+                        {t("Version {version} · {date}", {
+                          version: v.version,
+                          date: v.createdAt,
+                        })}
                       </summary>
                       <pre className="pre-wrap">
                         {JSON.stringify(v.data, null, 2)}
@@ -488,13 +560,15 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
               ))}
             <div className="actions" style={{ marginTop: 24 }}>
               <button disabled={busy} className="button button-primary">
-                Save draft
+                {" "}
+                {t("Save draft")}{" "}
               </button>
             </div>
           </form>
           {editing !== "new" && (
             <ActionForm
-              label="Publish saved version"
+              reasonLabel={t("Reason / reference")}
+              label={t("Publish saved version")}
               disabled={busy}
               onSubmit={(reason) =>
                 run(async () => {
@@ -509,24 +583,26 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
         </Panel>
       ) : (
         <>
-          <Panel title="Promotions">
+          <Panel title={t("Promotions")}>
             <div className="toolbar">
               <input
                 className="filter"
-                aria-label="Search campaigns"
-                placeholder="Search promotion or country"
+                aria-label={t("Search campaigns")}
+                placeholder={t("Search promotion or country")}
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
               <select
                 className="filter"
-                aria-label="Campaign status"
+                aria-label={t("Campaign status")}
                 value={status}
                 onChange={(e) => setStatus(e.target.value)}
               >
                 {["All", "Active", "Confirmed", "Archived", "Draft"].map(
                   (s) => (
-                    <option key={s}>{s}</option>
+                    <option key={s} value={s}>
+                      {t(s)}
+                    </option>
                   ),
                 )}
               </select>
@@ -535,13 +611,13 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
               <table>
                 <thead>
                   <tr>
-                    <th>Compare</th>
-                    <th>Promotion name</th>
-                    <th>Type / status</th>
-                    <th>Period (UTC)</th>
-                    <th>Countries</th>
-                    <th>Available / budget</th>
-                    <th>Actions</th>
+                    <th>{t("Compare")}</th>
+                    <th>{t("Promotion name")}</th>
+                    <th>{t("Type / status")}</th>
+                    <th>{t("Period (UTC)")}</th>
+                    <th>{t("Countries")}</th>
+                    <th>{t("Available / budget")}</th>
+                    <th>{t("Actions")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -549,7 +625,9 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                     <tr key={c.id}>
                       <td>
                         <input
-                          aria-label={`Compare ${c.data.name}`}
+                          aria-label={t("Compare {name}", {
+                            name: c.data.name,
+                          })}
                           type="checkbox"
                           checked={compare.includes(c.id)}
                           disabled={
@@ -567,13 +645,17 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                       <td>
                         <b>{c.data.name}</b>
                         <small>
-                          v{c.publishedVersion} · {c.data.slug}
+                          {" "}
+                          {t("Version {version}", {
+                            version: c.publishedVersion,
+                          })}{" "}
+                          · {c.data.slug}
                         </small>
                       </td>
                       <td>
                         {c.data.type}
                         <br />
-                        <Badge>{c.data.status}</Badge>
+                        <Badge label={t(c.data.status)}>{c.data.status}</Badge>
                       </td>
                       <td>
                         {c.data.purchaseStart.slice(0, 10)}
@@ -594,7 +676,8 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                             className="button button-light"
                             onClick={() => edit(c)}
                           >
-                            Edit
+                            {" "}
+                            {t("Edit")}{" "}
                           </button>
                           <button
                             disabled={busy}
@@ -607,7 +690,8 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                               }, "Campaign copied as a draft.")
                             }
                           >
-                            Copy
+                            {" "}
+                            {t("Copy")}{" "}
                           </button>
                         </div>
                       </td>
@@ -616,15 +700,17 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                 </tbody>
               </table>
             </div>
-            {!rows.length && <Empty>No campaigns match this filter.</Empty>}
+            {!rows.length && (
+              <Empty>{t("No campaigns match this filter.")}</Empty>
+            )}
           </Panel>
           {compare.length === 2 && (
-            <Panel title="Compare campaigns">
+            <Panel title={t("Compare campaigns")}>
               <div className="table-wrap">
                 <table>
                   <thead>
                     <tr>
-                      <th>Dimension</th>
+                      <th>{t("Dimension")}</th>
                       {compare.map((id) => (
                         <th key={id}>
                           {campaigns.find((c) => c.id === id)?.data.name}
@@ -653,7 +739,7 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                       ] as const
                     ).map((key) => (
                       <tr key={key}>
-                        <th>{key}</th>
+                        <th>{t(extraLabels[key] ?? key)}</th>
                         {compare.map((id) => (
                           <td key={id} className="pre-wrap">
                             {JSON.stringify(

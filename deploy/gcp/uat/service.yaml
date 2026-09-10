@@ -21,14 +21,11 @@ spec:
       timeoutSeconds: 300
       containers:
         - name: gateway
-          image: asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/gateway:uat-20260910
+          image: asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/gateway:uat-20260910-open-zh
           ports:
             - containerPort: 8080
           resources:
             limits: {cpu: "1", memory: 256Mi}
-          volumeMounts:
-            - name: uat-auth
-              mountPath: /etc/uat-auth
         - name: api
           image: asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/api:uat-20260910
           resources:
@@ -61,11 +58,6 @@ spec:
           volumeMounts:
             - {name: keys, mountPath: /app/keys}
       volumes:
-        - name: uat-auth
-          secret:
-            secretName: cashback-uat-htpasswd
-            items:
-              - {key: '1', path: htpasswd}
         - name: keys
           csi:
             driver: gcsfuse.run.googleapis.com

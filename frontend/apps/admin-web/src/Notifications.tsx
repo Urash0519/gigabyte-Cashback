@@ -1,8 +1,21 @@
 import { useCallback, useEffect, useState } from "react";
+import { useLocale } from "./i18n";
 import { api, type OperationNotification } from "@gigabyte-cashback/api-client";
 import { Badge, Empty, Panel, date } from "@gigabyte-cashback/ui";
 
 export function Notifications() {
+  const { t } = useLocale();
+  const subjectLabel = (subject: string) => {
+    const prefix = [
+      "Claim received",
+      "Claim update",
+      "Payment update",
+      "Bank details changed",
+    ].find((key) => subject.startsWith(key + " "));
+    return prefix
+      ? `${t(prefix)} ${subject.slice(prefix.length + 1)}`
+      : t(subject);
+  };
   const [notifications, setNotifications] = useState<OperationNotification[]>(
     [],
   );
@@ -44,10 +57,11 @@ export function Notifications() {
     <>
       <div className="page-head">
         <div>
-          <h1>Notifications</h1>
+          <h1>{t("Notifications")}</h1>
           <p>
-            Review queued case updates and record a development processing
-            attempt.
+            {t(
+              "Review queued case updates and record a development processing attempt.",
+            )}
           </p>
         </div>
         <button
@@ -55,35 +69,36 @@ export function Notifications() {
           disabled={busy}
           onClick={() => void refresh()}
         >
-          Refresh
+          {t("Refresh")}
         </button>
       </div>
       {error && (
         <p className="message error" role="alert">
-          {error}
+          {t(error)}
         </p>
       )}
       {message && (
         <p className="message" role="status">
-          {message}
+          {t(message)}
         </p>
       )}
-      <Panel title="Notification outbox">
+      <Panel title={t("Notification outbox")}>
         <p className="heading-note">
-          Development simulation only. Processing does not send email or confirm
-          delivery to the recipient.
+          {t(
+            "Development simulation only. Processing does not send email or confirm delivery to the recipient.",
+          )}
         </p>
         <div className="table-wrap" aria-busy={busy}>
           <table>
             <thead>
               <tr>
-                <th>Recipient</th>
-                <th>Subject / template</th>
-                <th>Claim ID</th>
-                <th>Status</th>
-                <th>Attempts</th>
-                <th>Processed at</th>
-                <th>Action</th>
+                <th>{t("Recipient")}</th>
+                <th>{t("Subject / template")}</th>
+                <th>{t("Claim ID")}</th>
+                <th>{t("Status")}</th>
+                <th>{t("Attempts")}</th>
+                <th>{t("Processed at")}</th>
+                <th>{t("Action")}</th>
               </tr>
             </thead>
             <tbody>
@@ -91,15 +106,19 @@ export function Notifications() {
                 <tr key={notification.id}>
                   <td>{notification.recipientMasked}</td>
                   <td>
-                    {notification.subject}
+                    {subjectLabel(notification.subject)}
                     <br />
-                    <small>Template {notification.templateVersion}</small>
+                    <small>
+                      {t("Template")} {notification.templateVersion}
+                    </small>
                   </td>
                   <td>
                     <code>{notification.claimId ?? "—"}</code>
                   </td>
                   <td>
-                    <Badge>{notification.status}</Badge>
+                    <Badge label={t(notification.status)}>
+                      {notification.status}
+                    </Badge>
                   </td>
                   <td>{notification.attempts}</td>
                   <td>{date(notification.processedAt)}</td>
@@ -109,9 +128,11 @@ export function Notifications() {
                       disabled={busy}
                       onClick={() => void simulate(notification.id)}
                     >
-                      {notification.attempts > 0
-                        ? "Simulate another attempt"
-                        : "Simulate processing"}
+                      {t(
+                        notification.attempts > 0
+                          ? "Simulate another attempt"
+                          : "Simulate processing",
+                      )}
                     </button>
                   </td>
                 </tr>
@@ -120,9 +141,9 @@ export function Notifications() {
           </table>
         </div>
         {!notifications.length && !busy && (
-          <Empty>No notifications have been queued.</Empty>
+          <Empty>{t("No notifications have been queued.")}</Empty>
         )}
-        {busy && <p role="status">Loading / processing…</p>}
+        {busy && <p role="status">{t("Loading / processing…")}</p>}
       </Panel>
     </>
   );

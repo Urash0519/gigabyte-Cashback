@@ -1,3 +1,4 @@
+import { useLocale } from "./i18n";
 import { useState } from "react";
 import { Batches, FinanceHistory } from "./FinanceDetails";
 import {
@@ -30,6 +31,7 @@ export function Payments({
   run,
   reload: refresh,
 }: Props) {
+  const { t } = useLocale();
   const [receiptVersion, setReceiptVersion] = useState(0);
   const reload = async () => {
     await refresh();
@@ -55,26 +57,28 @@ export function Payments({
     <>
       <div className="page-head">
         <div>
-          <h1>Payments & reconciliation</h1>
+          <h1>{t("Payments & reconciliation")}</h1>
           <p>
-            Authorize instructions, record delivery and reconcile confirmed
-            outcomes.
+            {t(
+              "Authorize instructions, record delivery and reconcile confirmed outcomes.",
+            )}{" "}
           </p>
         </div>
       </div>
       <p className="message info">
-        Manual payment workflow. Exporting a file does not send money or confirm
-        a bank transfer.
+        {t(
+          "Manual payment workflow. Exporting a file does not send money or confirm a bank transfer.",
+        )}{" "}
       </p>
-      <Panel title="Approved and ready for authorization">
+      <Panel title={t("Approved and ready for authorization")}>
         <div className="table-wrap">
           <table>
             <thead>
               <tr>
-                <th>Select</th>
-                <th>Claim</th>
-                <th>Applicant</th>
-                <th>Amount</th>
+                <th>{t("Select")}</th>
+                <th>{t("Claim")}</th>
+                <th>{t("Applicant")}</th>
+                <th>{t("Amount")}</th>
               </tr>
             </thead>
             <tbody>
@@ -82,7 +86,9 @@ export function Payments({
                 <tr key={c.id}>
                   <td>
                     <input
-                      aria-label={`Authorize ${c.reference}`}
+                      aria-label={t("Authorize {reference}", {
+                        reference: c.reference,
+                      })}
                       type="checkbox"
                       checked={selected.includes(c.id)}
                       onChange={(e) =>
@@ -106,27 +112,32 @@ export function Payments({
         </div>
         {!eligible.length ? (
           <Empty>
-            No approved claims without a hold or existing instruction.
+            {t(
+              "No approved claims without a hold or existing instruction.",
+            )}{" "}
           </Empty>
         ) : (
           <ActionForm
-            label={`Authorize ${selected.length} instructions`}
+            reasonLabel={t("Reason / reference")}
+            label={t("Authorize {count} instructions", {
+              count: selected.length,
+            })}
             disabled={busy || !selected.length}
             onSubmit={(reason) =>
               run(async () => {
                 await api.createPayments(selected, reason);
                 setSelected([]);
                 await reload();
-              }, "Payment instructions authorized. No money has been transferred.")
+              }, t("Payment instructions authorized. No money has been transferred."))
             }
           />
         )}
       </Panel>
       <Batches payments={payments} busy={busy} run={run} reload={reload} />
-      <Panel title="Payment instructions">
+      <Panel title={t("Payment instructions")}>
         <div className="toolbar">
           <select
-            aria-label="Payment status"
+            aria-label={t("Payment status")}
             className="filter"
             value={status}
             onChange={(e) => setStatus(e.target.value)}
@@ -140,7 +151,9 @@ export function Payments({
               "Succeeded",
               "Failed",
             ].map((s) => (
-              <option key={s}>{s}</option>
+              <option key={s} value={s}>
+                {t(s)}
+              </option>
             ))}
           </select>
         </div>
@@ -148,12 +161,12 @@ export function Payments({
           <table>
             <thead>
               <tr>
-                <th>Instruction / batch</th>
-                <th>Claim</th>
-                <th>Status</th>
-                <th>Amount</th>
-                <th>Reference / export hash</th>
-                <th>Actions</th>
+                <th>{t("Instruction / batch")}</th>
+                <th>{t("Claim")}</th>
+                <th>{t("Status")}</th>
+                <th>{t("Amount")}</th>
+                <th>{t("Reference / export hash")}</th>
+                <th>{t("Actions")}</th>
               </tr>
             </thead>
             <tbody>
@@ -162,17 +175,19 @@ export function Payments({
                   <td>
                     <code>{p.id}</code>
                     <br />
-                    <small>Batch {p.batchId}</small>
+                    <small>
+                      {t("Batch")} {p.batchId}
+                    </small>
                   </td>
                   <td>{claims.find((c) => c.id === p.claimId)?.reference}</td>
                   <td>
-                    <Badge>{p.status}</Badge>
+                    <Badge label={t(p.status)}>{p.status}</Badge>
                   </td>
                   <td>{money(p.amountMinor, p.currency)}</td>
                   <td>
                     {p.resultReference || "—"}
                     <br />
-                    <small>{p.exportSha256 || "Not exported"}</small>
+                    <small>{p.exportSha256 || t("Not exported")}</small>
                   </td>
                   <td>
                     <div className="actions">
@@ -188,13 +203,13 @@ export function Payments({
                           );
                         }}
                       >
-                        Record result
+                        {t("Record result")}{" "}
                       </button>
                       <a
                         className="button button-light"
                         href={api.exportPayment(p.id)}
                       >
-                        Export CSV
+                        {t("Export CSV")}{" "}
                       </a>
                     </div>
                   </td>
@@ -203,20 +218,23 @@ export function Payments({
             </tbody>
           </table>
         </div>
-        {!rows.length && <Empty>No payment instructions.</Empty>}
+        {!rows.length && <Empty>{t("No payment instructions.")}</Empty>}
       </Panel>
       {p && (
         <Panel
-          title={`Reconcile ${claims.find((c) => c.id === p.claimId)?.reference ?? p.id}`}
+          title={t("Reconcile {reference}", {
+            reference:
+              claims.find((c) => c.id === p.claimId)?.reference ?? p.id,
+          })}
           actions={
             <button className="button button-light" onClick={() => setId("")}>
-              Close
+              {t("Close")}{" "}
             </button>
           }
         >
           <div className="form-grid">
             <SelectField
-              label="Result / action"
+              label={t("Result / action")}
               value={action}
               onChange={(e) => setAction(e.target.value)}
             >
@@ -230,38 +248,41 @@ export function Payments({
               ].map((s) => (
                 <option
                   key={s}
+                  value={s}
                   disabled={s === "retry" && p.status !== "Failed"}
                 >
-                  {s}
+                  {t(s)}
                 </option>
               ))}
             </SelectField>
             <Field
-              label="Bank / delivery evidence reference"
+              label={t("Bank / delivery evidence reference")}
               value={reference}
               onChange={(e) => setReference(e.target.value)}
             />
             <Field
-              label="Confirmed amount"
+              label={t("Confirmed amount")}
               type="number"
               step="0.01"
               value={resultAmount}
               onChange={(e) => setResultAmount(e.target.value)}
             />
             <Field
-              label="Currency"
+              label={t("Currency")}
               value={currency}
               onChange={(e) => setCurrency(e.target.value.toUpperCase())}
             />
           </div>
           {p.status === "Unknown" && (
             <p className="message info">
-              Investigate the result and record confirmed success or failure.
-              Retry remains blocked while the outcome is unknown.
+              {t(
+                "Investigate the result and record confirmed success or failure. Retry remains blocked while the outcome is unknown.",
+              )}{" "}
             </p>
           )}
           <ActionForm
-            label="Record payment result"
+            reasonLabel={t("Reason / reference")}
+            label={t("Record payment result")}
             disabled={busy}
             onSubmit={(reason) =>
               run(async () => {
@@ -277,8 +298,9 @@ export function Payments({
                   await reload();
                   if (receipt.matchStatus !== "Matched")
                     throw new Error(
-                      receipt.matchStatus +
-                        ": result retained for investigation.",
+                      t(receipt.matchStatus) +
+                        ": " +
+                        t("Result retained for investigation."),
                     );
                 } else
                   await api.paymentAction(p.id, {
@@ -289,12 +311,14 @@ export function Payments({
                     currency,
                   });
                 await reload();
-              }, "Payment result recorded. Budget and case status refreshed.")
+              }, t("Payment result recorded. Budget and case status refreshed."))
             }
           />
           <small>
-            Created {date(p.createdAt)}. Keep the original instruction ID when
-            retrying a confirmed failure.
+            {t("Created")} {date(p.createdAt)}
+            {t(
+              ". Keep the original instruction ID when retrying a confirmed failure.",
+            )}{" "}
           </small>
         </Panel>
       )}
@@ -302,14 +326,14 @@ export function Payments({
         paymentId={id || undefined}
         refreshKey={String(receiptVersion)}
       />
-      <Panel title="Import manual results">
+      <Panel title={t("Import manual results")}>
         <p className="muted">
-          Paste JSON rows with instruction id, action, reason, reference,
-          amountMinor and currency. Each row is validated independently; failed
-          rows remain visible for correction.
+          {t(
+            "Paste JSON rows with instruction id, action, reason, reference, amountMinor and currency. Each row is validated independently; failed rows remain visible for correction.",
+          )}{" "}
         </p>
         <label className="field">
-          <span>Result rows</span>
+          <span>{t("Result rows")}</span>
           <textarea
             rows={5}
             value={importText}
@@ -326,11 +350,11 @@ export function Payments({
             void run(async () => {
               const rows: unknown = JSON.parse(importText);
               if (!Array.isArray(rows))
-                throw new Error("Expected an array of result rows.");
+                throw new Error(t("Expected an array of result rows."));
               const failures: string[] = [];
               for (const row of rows) {
                 if (!row || typeof row.id !== "string" || !row.reason) {
-                  failures.push("Each row requires id and reason.");
+                  failures.push(t("Each row requires id and reason."));
                   continue;
                 }
                 try {
@@ -346,8 +370,9 @@ export function Payments({
                     failures.push(
                       row.id +
                         ": " +
-                        receipt.matchStatus +
-                        " (saved for investigation)",
+                        t(receipt.matchStatus) +
+                        " " +
+                        t("(saved for investigation)"),
                     );
                 } catch (e) {
                   failures.push(
@@ -358,10 +383,10 @@ export function Payments({
               await reload();
               if (failures.length) throw new Error(failures.join("\n"));
               setImportText("");
-            }, "All result rows reconciled.")
+            }, t("All result rows reconciled."))
           }
         >
-          Validate and import
+          {t("Validate and import")}{" "}
         </button>
       </Panel>
     </>

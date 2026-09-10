@@ -1,0 +1,17 @@
+html[lang="zh-TW"] body {
+  font-family: Inter, "Noto Sans TC", "Microsoft JhengHei", sans-serif;
+}
+.admin-language {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  white-space: nowrap;
+}
+.admin-language select {
+  border: 1px solid #ddd;
+  border-radius: 6px;
+  background: #fff;
+  padding: 7px 10px;
+  color: #242424;
+}

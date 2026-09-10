@@ -1,3 +1,4 @@
+import { useLocale } from "./i18n";
 import { useState } from "react";
 import { Revisions } from "./Revisions";
 import {
@@ -24,6 +25,7 @@ type Props = {
   busy: boolean;
 };
 export function Claims({ claims, campaigns, run, reload, busy }: Props) {
+  const { t } = useLocale();
   const [id, setId] = useState("");
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
@@ -48,33 +50,35 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
     run(async () => {
       await api.claimAction(id, input);
       await reload();
-    }, "Case updated and recorded in its history.");
+    }, t("Case updated and recorded in its history."));
   return (
     <>
       <div className="page-head">
         <div>
-          <h1>Claims</h1>
-          <p>Review evidence, resolve exceptions and record decisions.</p>
+          <h1>{t("Claims")}</h1>
+          <p>
+            {t("Review evidence, resolve exceptions and record decisions.")}
+          </p>
         </div>
         {c && (
           <button className="button button-light" onClick={() => setId("")}>
-            Back to claims
+            {t("Back to claims")}{" "}
           </button>
         )}
       </div>
       {!c ? (
-        <Panel title="Case queue">
+        <Panel title={t("Case queue")}>
           <div className="toolbar">
             <input
               className="filter"
-              aria-label="Search customer or reference"
-              placeholder="Customer, reference, invoice, SN"
+              aria-label={t("Search customer or reference")}
+              placeholder={t("Customer, reference, invoice, SN")}
               value={search}
               onChange={(e) => setSearch(e.target.value)}
             />
             <select
               className="filter"
-              aria-label="Review status"
+              aria-label={t("Review status")}
               value={status}
               onChange={(e) => setStatus(e.target.value)}
             >
@@ -89,13 +93,15 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                 "Hold",
                 "Draft",
               ].map((x) => (
-                <option key={x}>{x}</option>
+                <option key={x} value={x}>
+                  {t(x)}
+                </option>
               ))}
             </select>
             <input
               className="filter"
-              aria-label="Residence country"
-              placeholder="Residence country e.g. DE"
+              aria-label={t("Residence country")}
+              placeholder={t("Residence country e.g. DE")}
               value={market}
               onChange={(e) => setMarket(e.target.value.toUpperCase())}
             />
@@ -104,13 +110,13 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
             <table>
               <thead>
                 <tr>
-                  <th>Claim</th>
-                  <th>Customer</th>
-                  <th>Promotion / country</th>
-                  <th>Review</th>
-                  <th>Payment</th>
-                  <th>Items / reward</th>
-                  <th>Submitted</th>
+                  <th>{t("Claim")}</th>
+                  <th>{t("Customer")}</th>
+                  <th>{t("Promotion / country")}</th>
+                  <th>{t("Review")}</th>
+                  <th>{t("Payment")}</th>
+                  <th>{t("Items / reward")}</th>
+                  <th>{t("Submitted")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -138,14 +144,17 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                       {c.data.residenceCountry}
                     </td>
                     <td>
-                      <Badge>{c.reviewStatus}</Badge>
-                      {c.onHold && <Badge>OnHold</Badge>}
+                      <Badge label={t(c.reviewStatus)}>{c.reviewStatus}</Badge>
+                      {c.onHold && <Badge label={t("OnHold")}>OnHold</Badge>}
                     </td>
                     <td>
-                      <Badge>{c.paymentStatus}</Badge>
+                      <Badge label={t(c.paymentStatus)}>
+                        {c.paymentStatus}
+                      </Badge>
                     </td>
                     <td>
-                      {c.data.items.length} / {money(c.amountMinor, c.currency)}
+                      {c.data.items.length}
+                      {t("/")} {money(c.amountMinor, c.currency)}
                     </td>
                     <td>{date(c.submittedAt)}</td>
                   </tr>
@@ -153,36 +162,36 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
               </tbody>
             </table>
           </div>
-          {!rows.length && <Empty>No claims match this filter.</Empty>}
+          {!rows.length && <Empty>{t("No claims match this filter.")}</Empty>}
         </Panel>
       ) : (
         <>
           <div className="metrics">
             <div className="metric">
-              <span>Claim reference</span>
+              <span>{t("Claim reference")}</span>
               <strong style={{ fontSize: "1.15rem" }}>{c.reference}</strong>
             </div>
             <div className="metric">
-              <span>Review</span>
+              <span>{t("Review")}</span>
               <strong>
-                <Badge>{c.reviewStatus}</Badge>{" "}
-                {c.onHold && <Badge>OnHold</Badge>}
+                <Badge label={t(c.reviewStatus)}>{c.reviewStatus}</Badge>{" "}
+                {c.onHold && <Badge label={t("OnHold")}>OnHold</Badge>}
               </strong>
             </div>
             <div className="metric">
-              <span>Payment</span>
+              <span>{t("Payment")}</span>
               <strong>
-                <Badge>{c.paymentStatus}</Badge>
+                <Badge label={t(c.paymentStatus)}>{c.paymentStatus}</Badge>
               </strong>
             </div>
             <div className="metric">
-              <span>Claim reward</span>
+              <span>{t("Claim reward")}</span>
               <strong>{money(c.amountMinor, c.currency)}</strong>
             </div>
           </div>
           <div className="split">
             <div>
-              <Panel title="Applicant and purchase">
+              <Panel title={t("Applicant and purchase")}>
                 <dl className="details">
                   {Object.entries({
                     Name: `${c.data.title} ${c.data.firstName} ${c.data.lastName}`,
@@ -210,25 +219,29 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                     Retailer:
                       version?.retailers.find((r) => r.id === c.data.retailerId)
                         ?.name ?? c.data.retailerId,
-                    "Terms accepted": String(c.data.termsAccepted),
-                    "Privacy accepted": String(c.data.privacyAccepted),
-                    "Marketing consent": String(c.data.marketingAccepted),
+                    "Terms accepted": t(c.data.termsAccepted ? "Yes" : "No"),
+                    "Privacy accepted": t(
+                      c.data.privacyAccepted ? "Yes" : "No",
+                    ),
+                    "Marketing consent": t(
+                      c.data.marketingAccepted ? "Yes" : "No",
+                    ),
                   }).map(([k, v]) => (
                     <div key={k}>
-                      <dt>{k}</dt>
+                      <dt>{t(k)}</dt>
                       <dd>{v || "—"}</dd>
                     </div>
                   ))}
                 </dl>
               </Panel>
-              <Panel title="Products">
+              <Panel title={t("Products")}>
                 <div className="table-wrap">
                   <table>
                     <thead>
                       <tr>
-                        <th>Series / product</th>
-                        <th>Serial / check number</th>
-                        <th>Reward</th>
+                        <th>{t("Series / product")}</th>
+                        <th>{t("Serial / check number")}</th>
+                        <th>{t("Reward")}</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -257,7 +270,7 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                   </table>
                 </div>
               </Panel>
-              <Panel title="Evidence">
+              <Panel title={t("Evidence")}>
                 {c.data.attachments.length ? (
                   c.data.attachments.map((a) => (
                     <div className="line-item" key={a.id}>
@@ -268,37 +281,41 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                       >
                         {a.fileName}
                       </a>{" "}
-                      <Badge>{a.kind}</Badge>
+                      <Badge label={t(a.kind)}>{a.kind}</Badge>
                       <p>
                         <small>
-                          {a.size} bytes · {a.scanStatus} {a.productId}
+                          {a.size}
+                          {t("bytes ·")} {t(a.scanStatus)} {a.productId}
                         </small>
                       </p>
                     </div>
                   ))
                 ) : (
-                  <Empty>No uploaded evidence.</Empty>
+                  <Empty>{t("No uploaded evidence.")}</Empty>
                 )}
               </Panel>
-              <Panel title="Payment profile (masked)">
+              <Panel title={t("Payment profile (masked)")}>
                 <dl className="details">
                   {Object.entries(c.data.bank).map(([k, v]) => (
                     <div key={k}>
-                      <dt>{k}</dt>
-                      <dd>{v || "—"}</dd>
+                      <dt>{t(k)}</dt>
+                      <dd>
+                        {k === "accountHolderProfileType" ? t(v) : v || "—"}
+                      </dd>
                     </div>
                   ))}
                 </dl>
               </Panel>
             </div>
             <div>
-              <Panel title="Review action">
+              <Panel title={t("Review action")}>
                 <p className="muted">
-                  Complete each required check before approval. A hold blocks
-                  approval and payment submission.
+                  {t(
+                    "Complete each required check before approval. A hold blocks approval and payment submission.",
+                  )}{" "}
                 </p>
                 <SelectField
-                  label="Action"
+                  label={t("Action")}
                   value={action}
                   onChange={(e) => setAction(e.target.value)}
                 >
@@ -313,13 +330,13 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                     ["internal-note", "Internal note"],
                   ].map(([v, l]) => (
                     <option key={v} value={v}>
-                      {l}
+                      {t(l)}
                     </option>
                   ))}
                 </SelectField>
                 {action === "check" && (
                   <SelectField
-                    label="Required check"
+                    label={t("Required check")}
                     value={check}
                     onChange={(e) => setCheck(e.target.value)}
                   >
@@ -332,12 +349,15 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                       "rma",
                       "evidence",
                     ].map((x) => (
-                      <option key={x}>{x}</option>
+                      <option key={x} value={x}>
+                        {t(x)}
+                      </option>
                     ))}
                   </SelectField>
                 )}
                 <ActionForm
-                  label="Record action"
+                  reasonLabel={t("Reason / reference")}
+                  label={t("Record action")}
                   disabled={busy}
                   onSubmit={(reason) =>
                     act({
@@ -348,27 +368,34 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                   }
                 />
               </Panel>
-              <Panel title="Case history">
+              <Panel title={t("Case history")}>
                 <ol className="timeline">
                   {[...c.history].reverse().map((e) => (
                     <li key={e.id}>
-                      <b>{e.action}</b>
+                      <b>
+                        {e.action.startsWith("Check:")
+                          ? `${t("Check")}: ${t(e.action.slice(6))}`
+                          : e.action.startsWith("Payment:")
+                            ? `${t("Payment")}: ${t(e.action.slice(8))}`
+                            : t(e.action)}
+                      </b>
                       <p>{e.reason}</p>
                       <time>
-                        {date(e.createdAt)} · {e.actor}
+                        {date(e.createdAt)}
+                        {t("·")} {e.actor}
                       </time>
                     </li>
                   ))}
                 </ol>
               </Panel>
               <Revisions claim={c} />
-              <Panel title="Rule snapshot">
+              <Panel title={t("Rule snapshot")}>
                 <p>
-                  Version ID:{" "}
-                  <code>{c.campaignVersionId ?? "Not submitted"}</code>
+                  {t("Version ID:")}{" "}
+                  <code>{c.campaignVersionId ?? t("Not submitted")}</code>
                 </p>
                 <details>
-                  <summary>View submitted campaign rules</summary>
+                  <summary>{t("View submitted campaign rules")}</summary>
                   <pre className="pre-wrap">
                     {JSON.stringify(version, null, 2)}
                   </pre>

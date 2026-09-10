@@ -10,12 +10,12 @@ Deployed and verified **2026-09-10**. Project `side-project-platform`, account `
 | Artifact Registry | `cashback-uat` | Regional Docker images: API, migrator and combined public/admin gateway. |
 | Cloud Build | On-demand builds | `cloudbuild.yaml`; source archive uses existing `side-project-platform_cloudbuild` bucket. |
 | IAM | `cashback-uat@side-project-platform.iam.gserviceaccount.com` | Dedicated runtime. Cloud SQL Client, bucket-scoped Object Admin and access to only runtime secrets. |
-| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00001-zfm`. |
+| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00002-w6n`, 100% traffic. |
 | Cloud Run Job | `cashback-uat-migrator` | 1 task, 1 vCPU / 1GiB, 0 retries; successful execution `cashback-uat-migrator-2mc42`. |
 | Cloud Storage | `side-project-platform-cashback-uat-evidence` | Private ABP claim evidence; same region. Runtime Object Admin + Legacy Bucket Reader (ABP requires `storage.buckets.get` before uploading). |
 | Cloud Storage | `side-project-platform-cashback-uat-keys` | Private persistent ASP.NET Core Data Protection keys across instance restarts; runtime Object Admin. Persisted XML key verified. |
-| Secret Manager | `cashback-uat-db`, `cashback-uat-encryption`, `cashback-uat-htpasswd` | Database connection, bank-field encryption and UAT gateway password hash. Runtime gets access only to these three secrets. All version 1, region asia-east1. |
-| Secret Manager | `cashback-uat-access` | UAT username/password for the owner to retrieve; no runtime access. Version 1, region asia-east1. |
+| Secret Manager | `cashback-uat-db`, `cashback-uat-encryption` | Active database connection and bank-field encryption secrets. Runtime access is limited to these two secrets; version 1, asia-east1. |
+| Secret Manager (retired) | `cashback-uat-access`, `cashback-uat-htpasswd` | Previous gateway credentials retained for rollback, no longer mounted or used. Version 1 disabled after rollout; runtime htpasswd access removed. |
 | Cloud Logging / Monitoring | Existing project services | Build/run diagnostics and built-in metrics. No dedicated paid dashboard, load balancer, NAT, Redis or Kubernetes cluster. |
 
 The existing `gigabyte-cashback` prototype service and unrelated project services are unchanged. No local database or personal claim data is copied to GCP.
@@ -26,14 +26,15 @@ Newly enabled APIs: `sqladmin.googleapis.com`, `secretmanager.googleapis.com`. C
 
 - Public: https://cashback-uat-219894818230.asia-east1.run.app/
 - Admin: https://cashback-uat-219894818230.asia-east1.run.app/admin/
-- Gateway username: `uat`. The owner can retrieve the JSON `{username,password}` from [cashback-uat-access version 1](https://console.cloud.google.com/security/secret-manager/secret/cashback-uat-access/versions?project=side-project-platform). Share the test password with the intended testers through your normal private channel, not GitHub.
-- After the browser password prompt, use development button login inside the application. All three testers share the mock application identity and records.
-- The user explicitly approved `allUsers` / `roles/run.invoker` on this gateway service. Every route is still protected by Basic authentication over HTTPS. There is no separately published API service or publicly readable evidence bucket.
+- No gateway username or password is required. The user explicitly requested open UAT access for everyone.
+- Press the application development-login button to use the mock identity. Anyone can do this, including for admin operations; all testers share the mock identity and records.
+- Cloud Run retains `allUsers` / `roles/run.invoker`. Database/buckets remain private; API application session and XSRF checks remain in place.
+- Admin language is selectable in the header: English / 繁體中文. It persists separately from the public-web language; business values and user-entered content remain unchanged.
 - Showcase campaign `3a239bb0-cc84-c268-40a6-26756a441699` is ready. Synthetic integration fixtures remain visible only through admin/owned claims.
 
 ## Application arrangement
 
-The gateway serves public web at `/`, admin at `/admin/`, and proxies `/api/` to the ABP container over localhost. The gateway protects every request with HTTP Basic authentication over Cloud Run HTTPS. The API has no separate public service. Development button login remains behind this gate; all testers share the existing mock identity. Cookie and XSRF traffic stays on the same origin.
+The gateway serves public web at `/`, admin at `/admin/`, and proxies `/api/` to the ABP container over localhost. The gateway is publicly accessible over Cloud Run HTTPS without Basic authentication. The API has no separate public service. The explicit development-login button remains; all testers share the existing mock identity. Cookie and XSRF traffic stays on the same origin.
 
 Credentials are never included in images, Git, README or URLs. `provision.ps1` is a **first-install script**, not a credential rotation script: do not rerun after partial creation without first inspecting existing resources. It writes temporary secrets only under ignored `.uat-test/gcp-secrets`. Do not change the encryption secret after bank data exists without a migration/rotation plan.
 
@@ -41,24 +42,27 @@ Temporary local credential files were removed after successful deployment; Secre
 
 Schema upgrades use the existing ABP DbMigrator and EF migrations. This deployment adds no database schema, so no new migration is needed. UAT keys use the private bucket mounted at `/app/keys`; `DataProtection:KeyPath` is optional and local development behavior remains unchanged.
 
-Verified build: `43b2b63d-f58f-441d-af6a-db89704fc3a8` **SUCCESS**, tag `uat-20260910`. API digest `89679de9e8201b2c201972497d86d522c741bf4c6654ab36e40fb0c3fb1feac1`; migrator `3933c1211d9af0ce3d5aaf1022c540a1000974a489c87c3b51409c20660fcfd2`; gateway `116739b6fedffc88efd8286c80199194a9a4e6489a0907e32db7cca387d2b343`. Local backend tests: 29 passed. Migration completed successfully in 18.2 seconds. Cloud HTTP integration: 24 passed, including real Cloud SQL transactions and GCS evidence upload. The public endpoint additionally passed gateway checks on `/`, `/admin/`, `/health`, `/api/dev-auth/session` and `/api/operations/campaigns`: no password returns 401, correct password returns 200; both built JavaScript bundles are accessible; gateway authentication alone does not create an application session.
+Verified build: `43b2b63d-f58f-441d-af6a-db89704fc3a8` **SUCCESS**, tag `uat-20260910`. API digest `89679de9e8201b2c201972497d86d522c741bf4c6654ab36e40fb0c3fb1feac1`; migrator `3933c1211d9af0ce3d5aaf1022c540a1000974a489c87c3b51409c20660fcfd2`; gateway `116739b6fedffc88efd8286c80199194a9a4e6489a0907e32db7cca387d2b343`. Local backend tests: 29 passed. Migration completed successfully in 18.2 seconds. Cloud HTTP integration: 24 passed, including real Cloud SQL transactions and GCS evidence upload. That initial release used Basic authentication. The later open-UAT release below supersedes that entry policy.
+
+## Open UAT / admin language release
+
+Gateway build `62f35b35-a8b0-43a5-9c92-e47e5423718d` succeeded, image tag `uat-20260910-open-zh`, digest `sha256:d4addcdd719b4cd2e55aca65ad1c6989fa415ed53ef9026e9f60d8a5364c76be`. API and database are unchanged; no migration needed for this frontend/configuration release.
+
+Revision `cashback-uat-00002-w6n` passed 24 cloud business-flow checks and anonymous access checks for both apps, health and public API routes without Authorization/cookies. No Basic challenge is returned. Browser checks confirmed Chinese login/navigation, campaign fields, reports and payments/notifications, preservation of an unsaved campaign name when switching language, and language persistence after reload. Retired gateway secret versions were disabled and their runtime accessor binding removed after rollout.
 
 ## Build and release
 
 ```powershell
-gcloud builds submit . --config=deploy/gcp/uat/cloudbuild.yaml --substitutions=_TAG=uat-20260910 --project=side-project-platform --account=yoyo.chen@gigabyte.com
-# After authorized resource/secret provisioning and database creation:
-gcloud run jobs replace deploy/gcp/uat/migrator.yaml --region=asia-east1 --project=side-project-platform --account=yoyo.chen@gigabyte.com
-gcloud run jobs execute cashback-uat-migrator --wait --region=asia-east1 --project=side-project-platform --account=yoyo.chen@gigabyte.com
-# Deploy only after migration succeeds:
+gcloud builds submit . --config=deploy/gcp/uat/cloudbuild.gateway.yaml --substitutions=_TAG=uat-20260910-open-zh --project=side-project-platform --account=yoyo.chen@gigabyte.com
+# This frontend-only release reuses the existing API/database; deploy the built gateway:
 gcloud run services replace deploy/gcp/uat/service.yaml --region=asia-east1 --project=side-project-platform --account=yoyo.chen@gigabyte.com
 ```
 
-`scripts/verify-operations.mjs`, `scripts/verify-uat-access.mjs` and `scripts/seed-showcase.mjs` accept `CASHBACK_API_URL` and the base64 `username:password` in `CASHBACK_UAT_BASIC_AUTH`. For an IAM-private deployment, supply `CASHBACK_RUN_ID_TOKEN` as well. Supply credentials only through process environment variables. The HTTP helper only adds them to the configured API origin and refuses redirects. Set `CASHBACK_PUBLIC_URL` when running the showcase script to report the correct public URL.
+`scripts/verify-operations.mjs`, `scripts/verify-uat-access.mjs` and `scripts/seed-showcase.mjs` accept `CASHBACK_API_URL`. Current UAT verification uses no gateway password or IAM token. The optional authentication helper remains compatible with private/protected environments; it only adds supplied credentials to the configured API origin and refuses redirects. Set `CASHBACK_PUBLIC_URL` when running the showcase script to report the correct public URL.
 
-From the repository root with Node 24, run `./deploy/gcp/uat/verify.ps1` (optional `-NodePath` for a specific Node executable, `-SeedShowcase` for the idempotent showcase). It retrieves the gateway secret without printing it, clears the authentication environment variable after use, and creates clearly marked synthetic integration records.
+From the repository root with Node 24, run `./deploy/gcp/uat/verify.ps1` (optional `-NodePath` for a specific Node executable, `-SeedShowcase` for the idempotent showcase). It verifies anonymous entry with no credentials and runs clearly marked synthetic integration records through the development-login flow.
 
-For later releases, use a unique image tag and update both manifests. This prevents an ambiguous mutable-tag rollback. The service must expose only the password-protected gateway; never publish the mock-login API separately.
+For later releases, use a unique image tag and update both manifests. This prevents an ambiguous mutable-tag rollback. When backend schema changes, build the API/migrator images and run the ABP migration job before updating API traffic. The current open UAT uses the gateway as its only incoming service. To restore the previous password-protected revision, first re-enable its retired secrets and restore the runtime htpasswd accessor binding.
 
 ## Stop / resume and cost
 

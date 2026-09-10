@@ -18,7 +18,7 @@ const config={name:`Smoke ${stamp}`,slug:`smoke-${stamp}`,type:'Cashback',status
 let campaign=await request('/api/operations/campaigns',config);campaign=await request(`/api/operations/campaigns/${campaign.id}/publish`,{reason:'Integration verification'});assert.equal(campaign.publishedVersion,1);check('campaign persisted and immutable version published');
 assert.ok(!(await request('/api/operations/campaigns')).some(c=>c.id===campaign.id));assert.ok((await request('/api/operations/campaigns?admin=true')).some(c=>c.id===campaign.id));check('integration fixtures hidden publicly and retained for administrators');
 const copy=await request(`/api/operations/campaigns/${campaign.id}/copy`,{});assert.equal(copy.publishedVersion,0);assert.equal(copy.reservedMinor,0);check('copied draft has no commitments');
-await request('/api/dev-auth/login',{area:'public'});
+await request('/api/dev-auth/logout',{});await request('/api/dev-auth/session');await request('/api/dev-auth/login',{area:'public'});await request('/api/dev-auth/session');
 const data={campaignId:campaign.id,market:'DE',email:'yoyo.chen@gigabyte.com',confirmEmail:'yoyo.chen@gigabyte.com',firstName:'Synthetic',lastName:'Test',title:'Mx',phone:'+49000000000',address1:'Synthetic street '+stamp,address2:'',city:'Berlin',state:'',postcode:'10115',residenceCountry:'DE',purchaseCountry:'FR',bankCountry:'DE',language:'en',invoiceNumber:`INV-${stamp}`,purchaseDate:iso(-20),purchaseAmountMinor:120000,retailerId:'FR-SHOP',bank:{accountHolderProfileType:'Individual',accountHolder:'Synthetic Test',bankName:'Test Bank',iban:'DE00000000000000000000',bic:'TESTDE00',accountNumber:'',sortCode:''},items:[{productId:'BOARD',serialNumber:`SN-${stamp}-A`,checkNumber:'',amountMinor:1},{productId:'DISPLAY',serialNumber:`SN-${stamp}-B`,checkNumber:'',amountMinor:1}],attachments:[],termsAccepted:true,privacyAccepted:true,marketingAccepted:false,legacyFields:{}};
 let claim=await request('/api/operations/claims',data);assert.ok(claim.data.bank.iban.includes('*'));assert.ok(!JSON.stringify(claim).includes(data.bank.iban));check('bank values are masked in claim response');
 const ownedCampaign=await request(`/api/operations/claims/${claim.id}/campaign`);assert.equal(ownedCampaign.id,campaign.id);assert.equal(ownedCampaign.publishedVersion,1);assert.equal((await fetch(base+`/api/operations/claims/${claim.id}/campaign`)).status,401);check('hidden campaign snapshot remains available only through authenticated claim access');
@@ -46,13 +46,13 @@ const report=await request(`/api/operations/reports?campaignId=${campaign.id}`);
 const audit=await request('/api/operations/audit');assert.ok(audit.some(e=>e.targetId===claim.id&&e.actor==='yoyo.chen@gigabyte.com'));check('business audit records actor');
 const queue=await request('/api/operations/notifications');assert.ok(queue.length>0);await request(`/api/operations/notifications/${queue[0].id}/simulate`,{},204);check('notification outbox simulation explicitly recorded');
 // Supplement, immutable history, batch delivery and durable reconciliation.
-await request('/api/dev-auth/login',{area:'public'});await request('/api/dev-auth/session');
+await request('/api/dev-auth/logout',{});await request('/api/dev-auth/session');await request('/api/dev-auth/login',{area:'public'});await request('/api/dev-auth/session');
 let second=await request('/api/operations/claims',{...data,invoiceNumber:`INV-${stamp}-2`,items:data.items.map(i=>({...i,serialNumber:i.serialNumber+'-2'}))});
 for(const [kind,productId]of[['Invoice',''],['SerialNumber','BOARD'],['SerialNumber','DISPLAY']])await request(`/api/operations/claims/${second.id}/evidence`,{fileName:`${kind}.pdf`,kind,productId,content});
 await request(`/api/operations/claims/${second.id}/submit`,{});
 await request('/api/dev-auth/login',{area:'admin'});await request('/api/dev-auth/session');
 await request(`/api/operations/claims/${second.id}/action`,{action:'supplement',reason:'Correct product list'});
-await request('/api/dev-auth/login',{area:'public'});await request('/api/dev-auth/session');
+await request('/api/dev-auth/logout',{});await request('/api/dev-auth/session');await request('/api/dev-auth/login',{area:'public'});await request('/api/dev-auth/session');
 second=(await request('/api/operations/claims')).find(c=>c.id===second.id);
 second=await request(`/api/operations/claims/${second.id}/save`,{...second.data,items:second.data.items.slice(0,1),changeReason:'Remove ineligible display'});
 assert.ok(second.revisions.length>0);second=await request(`/api/operations/claims/${second.id}/submit`,{});assert.equal(second.amountMinor,5000);check('supplement keeps revision and recalculates budget');

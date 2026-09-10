@@ -1,0 +1,972 @@
+{
+  "format": "gigabyte-cashback-campaign",
+  "schemaVersion": 1,
+  "data": {
+    "name": "Q1 2026 Build Beyond — Reference Simulation",
+    "slug": "q1-2026-build-beyond-reference",
+    "type": "Cashback",
+    "status": "Draft",
+    "market": "DE",
+    "markets": [
+      "DE",
+      "FR",
+      "IT",
+      "ES",
+      "NL"
+    ],
+    "languages": [
+      "en"
+    ],
+    "currency": "EUR",
+    "timeZone": "Europe/Berlin",
+    "purchaseStart": "2026-03-15T23:01:00Z",
+    "purchaseEnd": "2026-03-28T22:59:00Z",
+    "claimStart": "2026-03-29T23:01:00Z",
+    "claimEnd": "2026-04-26T22:59:00Z",
+    "waitingDays": 14,
+    "maxClaimsPerPerson": 1,
+    "maxClaimsPerHousehold": 1,
+    "maxItemsPerCategory": 1,
+    "exclusivityGroup": "q1-2026-build-beyond",
+    "claimLimit": 1000,
+    "budgetMinor": 10000000,
+    "bufferMinor": 500000,
+    "acceptingClaims": true,
+    "termsVersion": "q1-reference-simulation-1",
+    "terms": "REFERENCE SIMULATION — for internal acceptance testing only. This is an English operational paraphrase of the supplied Q1 screenshots, not a live promotion or approved legal terms. No real purchase, bank account, payment or entitlement is required or promised.\n\nEligibility: the reference campaign is for end consumers aged 18 or over purchasing for their own use. This simulation is limited to Germany, France, Italy, Spain and the Netherlands. Purchase an eligible new Graphics Card, Motherboard or Monitor directly from a retailer listed for the selected purchase country. Second-hand, refurbished, resale and returned products are not eligible. Retailers cannot submit claims for customers.\n\nReference qualifying period: 16–28 March 2026. Reference claim period: 30 March–26 April 2026, and at least 14 days after purchase. Exact stored timestamps reproduce the source's stated CET (UTC+01:00); the claim window overlaps daylight saving time and requires owner confirmation before any real launch. The active UAT copy may use different dates shown in its campaign settings.\n\nOne claim is allowed per participant and per household/address, with at most one product from each of the three categories. All products in a claim must appear on the same invoice. Cashback is the sum of the listed amounts for the selected products: up to EUR 30 for a graphics card, EUR 90 for a motherboard and EUR 60 for a monitor, giving a maximum EUR 180. There is no A+B bonus. The reference excludes combination with other promoter promotions; this simulation uses a named exclusivity group for related campaign copies.\n\nTo claim, provide participant and matching bank-account-holder details, invoice number and purchase date, the selected retailer, product model and serial number, a readable invoice and a photo of each selected product's serial-number label. The invoice should show the retailer, purchase date, product and purchase price. The source also requires AORUS membership and matching member email; verification remains manual in this simulation.\n\nThe source describes an acknowledgement email, an acceptance or denial response within 10 working days and bank transfer within 90 days after claim validation. UAT notifications and payments are simulated; working-day calendars and real email/bank integrations are not represented by this sample. Incomplete evidence may require additional information. Review and payment progress can be checked in the claim tracker. For a replacement, return, correction or missing confirmation, contact the campaign test owner through the configured support channel.\n\nThe EUR 100,000 budget, EUR 5,000 buffer, 1,000-claim limit and per-model quantity limit of 1 are sample operating settings, not values published in the screenshots. Availability and claim acceptance remain subject to the configured campaign controls. These terms must be replaced and reviewed before use for a real promotion.",
+    "privacy": "UAT SIMULATION NOTICE. Use fictitious participant, invoice and bank details only. The reference campaign collected identity, contact, purchase, serial-number and bank details to administer cashback; marketing consent was optional. This sample does not reproduce the agency's controller/processor agreement or claim that its privacy notice applies to this system. The campaign owner must supply the approved privacy notice, retention policy and contact details before a real launch. The support address in this sample is deliberately non-deliverable.",
+    "faq": "Q: Which products and countries can I test?\nA: The supplied Q1 product table contains 59 eligible models across Graphics Card, Motherboard and Monitor. This sample covers DE, FR, IT, ES and NL, using the same EUR cashback table.\n\nQ: Can I submit several products?\nA: Yes: at most one product per category, all on the same invoice, in one claim per participant and household. The maximum is EUR 180; there is no A+B bonus.\n\nQ: When can I apply?\nA: Wait at least 14 days after purchase and submit within the campaign's displayed claim window. The downloadable reference retains the historic Q1 dates; the separately seeded UAT activity may show shifted dates.\n\nQ: What evidence is needed?\nA: Upload a legible invoice showing the retailer, date, model and price, plus serial-number-label photos. Use synthetic evidence and fictitious bank details in UAT. The original requires AORUS membership with a matching email; membership is checked manually here.\n\nQ: Why can a claim still request information after I upload a file?\nA: Uploading evidence does not itself complete review. Check the review message and supply the requested information through the available claim workflow.\n\nQ: What are review and payment statuses?\nA: Review status records the eligibility decision; payment status records payout processing. Approval does not mean that a transfer has completed. Use the tracker for the current state.\n\nQ: How long does processing take?\nA: The source states 10 working days for an acceptance/denial response and 90 days from validation for payment. UAT uses simulated notifications and payment results; these are not real service or bank-transfer commitments.\n\nQ: What if my product was replaced or returned, or my details are incorrect?\nA: Contact the campaign test owner before proceeding. The reference excludes returned products and requires the bank account holder to match the claimant. The screenshot shows FAQ topics for replacements and corrections, but its collapsed answers are not available; no original answer is asserted here.\n\nQ: Can I select a retailer that is absent from the list?\nA: Choose an eligible retailer for the purchase country. An unlisted typed name does not create a participating retailer.",
+    "description": "Build Beyond with selected GIGABYTE graphics cards, motherboards and monitors: up to EUR 180 combined standard cashback on one invoice. One product per category, one claim per person/household, after a 14-day wait. Historical Q1 reference simulation — no real offer, payment or A+B bonus.",
+    "bannerUrl": "/assets/q1-reference-hero.jpg",
+    "supportEmail": "support@example.test",
+    "products": [
+      {
+        "id": "aorus-radeon-rx-9070-xt-elite-16g",
+        "category": "Graphics Card",
+        "model": "AORUS Radeon RX 9070 XT ELITE 16G",
+        "series": "RX 9070",
+        "ean": "",
+        "cashbackMinor": 3000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "radeon-rx-9070-xt-gaming-oc-ice-16g",
+        "category": "Graphics Card",
+        "model": "Radeon RX 9070 XT GAMING OC ICE 16G",
+        "series": "RX 9070",
+        "ean": "",
+        "cashbackMinor": 2500,
+        "quantityLimit": 1
+      },
+      {
+        "id": "radeon-rx-9070-xt-gaming-oc-16g",
+        "category": "Graphics Card",
+        "model": "Radeon RX 9070 XT GAMING OC 16G",
+        "series": "RX 9070",
+        "ean": "",
+        "cashbackMinor": 2500,
+        "quantityLimit": 1
+      },
+      {
+        "id": "radeon-rx-9070-xt-gaming-16g",
+        "category": "Graphics Card",
+        "model": "Radeon RX 9070 XT GAMING 16G",
+        "series": "RX 9070",
+        "ean": "",
+        "cashbackMinor": 2500,
+        "quantityLimit": 1
+      },
+      {
+        "id": "radeon-rx-9070-gaming-oc-16g",
+        "category": "Graphics Card",
+        "model": "Radeon RX 9070 GAMING OC 16G",
+        "series": "RX 9070",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "radeon-rx-9070-gaming-16g",
+        "category": "Graphics Card",
+        "model": "Radeon RX 9070 GAMING 16G",
+        "series": "RX 9070",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "radeon-rx-9060-xt-gaming-oc-ice-16g",
+        "category": "Graphics Card",
+        "model": "Radeon RX 9060 XT GAMING OC ICE 16G",
+        "series": "RX 9060",
+        "ean": "",
+        "cashbackMinor": 1500,
+        "quantityLimit": 1
+      },
+      {
+        "id": "radeon-rx-9060-xt-gaming-oc-16g",
+        "category": "Graphics Card",
+        "model": "Radeon RX 9060 XT GAMING OC 16G",
+        "series": "RX 9060",
+        "ean": "",
+        "cashbackMinor": 1500,
+        "quantityLimit": 1
+      },
+      {
+        "id": "radeon-rx-9060-xt-gaming-16g",
+        "category": "Graphics Card",
+        "model": "Radeon RX 9060 XT GAMING 16G",
+        "series": "RX 9060",
+        "ean": "",
+        "cashbackMinor": 1500,
+        "quantityLimit": 1
+      },
+      {
+        "id": "radeon-rx-9060-xt-gaming-oc-8g",
+        "category": "Graphics Card",
+        "model": "Radeon RX 9060 XT GAMING OC 8G",
+        "series": "RX 9060",
+        "ean": "",
+        "cashbackMinor": 1500,
+        "quantityLimit": 1
+      },
+      {
+        "id": "radeon-rx-9060-xt-gaming-8g",
+        "category": "Graphics Card",
+        "model": "Radeon RX 9060 XT GAMING 8G",
+        "series": "RX 9060",
+        "ean": "",
+        "cashbackMinor": 1500,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870e-aorus-xtreme-x3d-ai-top",
+        "category": "Motherboard",
+        "model": "X870E AORUS XTREME X3D AI TOP",
+        "series": "X870E",
+        "ean": "",
+        "cashbackMinor": 9000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870e-aorus-master-x3d-ice",
+        "category": "Motherboard",
+        "model": "X870E AORUS MASTER X3D ICE",
+        "series": "X870E",
+        "ean": "",
+        "cashbackMinor": 5000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b850-ai-top",
+        "category": "Motherboard",
+        "model": "B850 AI TOP",
+        "series": "B850",
+        "ean": "",
+        "cashbackMinor": 4000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870e-aero-x3d-wood",
+        "category": "Motherboard",
+        "model": "X870E AERO X3D WOOD",
+        "series": "X870E",
+        "ean": "",
+        "cashbackMinor": 3000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870e-aorus-pro-x3d-ice",
+        "category": "Motherboard",
+        "model": "X870E AORUS PRO X3D ICE",
+        "series": "X870E",
+        "ean": "",
+        "cashbackMinor": 3000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870e-aorus-pro-x3d",
+        "category": "Motherboard",
+        "model": "X870E AORUS PRO X3D",
+        "series": "X870E",
+        "ean": "",
+        "cashbackMinor": 3000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870e-aorus-elite-x3d",
+        "category": "Motherboard",
+        "model": "X870E AORUS ELITE X3D",
+        "series": "X870E",
+        "ean": "",
+        "cashbackMinor": 3000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870-aorus-stealth-ice",
+        "category": "Motherboard",
+        "model": "X870 AORUS STEALTH ICE",
+        "series": "X870",
+        "ean": "",
+        "cashbackMinor": 3000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b850-aorus-stealth-ice",
+        "category": "Motherboard",
+        "model": "B850 AORUS STEALTH ICE",
+        "series": "B850",
+        "ean": "",
+        "cashbackMinor": 3000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b850-aorus-stealth",
+        "category": "Motherboard",
+        "model": "B850 AORUS STEALTH",
+        "series": "B850",
+        "ean": "",
+        "cashbackMinor": 3000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870e-eagle-x3d-wifi7",
+        "category": "Motherboard",
+        "model": "X870E EAGLE X3D WIFI7",
+        "series": "X870E",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870-aorus-elite-x3d-ice",
+        "category": "Motherboard",
+        "model": "X870 AORUS ELITE X3D ICE",
+        "series": "X870",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870e-aorus-elite-wifi7",
+        "category": "Motherboard",
+        "model": "X870E AORUS ELITE WIFI7",
+        "series": "X870E",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870-aorus-elite-wifi7",
+        "category": "Motherboard",
+        "model": "X870 AORUS ELITE WIFI7",
+        "series": "X870",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870-aorus-elite-wifi7-ice",
+        "category": "Motherboard",
+        "model": "X870 AORUS ELITE WIFI7 ICE",
+        "series": "X870",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870-gaming-x-wifi7",
+        "category": "Motherboard",
+        "model": "X870 GAMING X WIFI7",
+        "series": "X870",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870-eagle-wifi7",
+        "category": "Motherboard",
+        "model": "X870 EAGLE WIFI7",
+        "series": "X870",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "x870-gaming-wifi6",
+        "category": "Motherboard",
+        "model": "X870 GAMING WIFI6",
+        "series": "X870",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b850-aorus-elite-wifi7-ice",
+        "category": "Motherboard",
+        "model": "B850 AORUS ELITE WIFI7 ICE",
+        "series": "B850",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b650e-aorus-stealth-ice",
+        "category": "Motherboard",
+        "model": "B650E AORUS STEALTH ICE",
+        "series": "B650E",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b850-gaming-x-wifi6e",
+        "category": "Motherboard",
+        "model": "B850 GAMING X WIFI6E",
+        "series": "B850",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b850-eagle-wifi7-ice",
+        "category": "Motherboard",
+        "model": "B850 EAGLE WIFI7 ICE",
+        "series": "B850",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b850-eagle-wifi6e",
+        "category": "Motherboard",
+        "model": "B850 EAGLE WIFI6E",
+        "series": "B850",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b850-gaming-wifi6",
+        "category": "Motherboard",
+        "model": "B850 GAMING WIFI6",
+        "series": "B850",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b850m-aorus-elite-wifi6e-ice",
+        "category": "Motherboard",
+        "model": "B850M AORUS ELITE WIFI6E ICE",
+        "series": "B850M",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b850m-eagle-wf7",
+        "category": "Motherboard",
+        "model": "B850M EAGLE WF7",
+        "series": "B850M",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b850m-gaming-x-wifi6e",
+        "category": "Motherboard",
+        "model": "B850M GAMING X WIFI6E",
+        "series": "B850M",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b850m-eagle-wifi6e-ice",
+        "category": "Motherboard",
+        "model": "B850M EAGLE WIFI6E ICE",
+        "series": "B850M",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b650-aorus-elite-ax-ice",
+        "category": "Motherboard",
+        "model": "B650 AORUS ELITE AX ICE",
+        "series": "B650",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b650e-eagle-wifi6e",
+        "category": "Motherboard",
+        "model": "B650E EAGLE WIFI6E",
+        "series": "B650E",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b650-a-elite-ax-ice",
+        "category": "Motherboard",
+        "model": "B650 A ELITE AX ICE",
+        "series": "B650",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b650-gaming-x-ax-v2",
+        "category": "Motherboard",
+        "model": "B650 GAMING X AX V2",
+        "series": "B650",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b650-eagle-ax",
+        "category": "Motherboard",
+        "model": "B650 EAGLE AX",
+        "series": "B650",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b650m-aorus-elite-ax-ice",
+        "category": "Motherboard",
+        "model": "B650M AORUS ELITE AX ICE",
+        "series": "B650M",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b840-gaming-x-wifi6e",
+        "category": "Motherboard",
+        "model": "B840 GAMING X WIFI6E",
+        "series": "B840",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "b840-eagle-wifi6e",
+        "category": "Motherboard",
+        "model": "B840 EAGLE WIFI6E",
+        "series": "B840",
+        "ean": "",
+        "cashbackMinor": 1000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "aorus-fo32u2p",
+        "category": "Monitor",
+        "model": "AORUS FO32U2P",
+        "series": "AORUS",
+        "ean": "",
+        "cashbackMinor": 6000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "aorus-fo32u2",
+        "category": "Monitor",
+        "model": "AORUS FO32U2",
+        "series": "AORUS",
+        "ean": "",
+        "cashbackMinor": 6000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "aorus-fo32u",
+        "category": "Monitor",
+        "model": "AORUS FO32U",
+        "series": "AORUS",
+        "ean": "",
+        "cashbackMinor": 6000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "aorus-fo27q5p",
+        "category": "Monitor",
+        "model": "AORUS FO27Q5P",
+        "series": "AORUS",
+        "ean": "",
+        "cashbackMinor": 6000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "mo34wqc2",
+        "category": "Monitor",
+        "model": "MO34WQC2",
+        "series": "MO",
+        "ean": "",
+        "cashbackMinor": 6000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "mo32u",
+        "category": "Monitor",
+        "model": "MO32U",
+        "series": "MO",
+        "ean": "",
+        "cashbackMinor": 6000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "mo32u2",
+        "category": "Monitor",
+        "model": "MO32U2",
+        "series": "MO",
+        "ean": "",
+        "cashbackMinor": 6000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "mo27u2",
+        "category": "Monitor",
+        "model": "MO27U2",
+        "series": "MO",
+        "ean": "",
+        "cashbackMinor": 6000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "mo27q28g",
+        "category": "Monitor",
+        "model": "MO27Q28G",
+        "series": "MO",
+        "ean": "",
+        "cashbackMinor": 5000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "m27up",
+        "category": "Monitor",
+        "model": "M27UP",
+        "series": "M",
+        "ean": "",
+        "cashbackMinor": 3000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "m27up-ice",
+        "category": "Monitor",
+        "model": "M27UP ICE",
+        "series": "M",
+        "ean": "",
+        "cashbackMinor": 3000,
+        "quantityLimit": 1
+      },
+      {
+        "id": "m27q2-qd-ice",
+        "category": "Monitor",
+        "model": "M27Q2 QD ICE",
+        "series": "M",
+        "ean": "",
+        "cashbackMinor": 2000,
+        "quantityLimit": 1
+      }
+    ],
+    "retailers": [
+      {
+        "id": "de-amazon-de",
+        "name": "Amazon.de",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-mindfactory",
+        "name": "Mindfactory",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-alternate-de",
+        "name": "Alternate.de",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-notebooksbilliger",
+        "name": "Notebooksbilliger",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-caseking",
+        "name": "Caseking",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-cyberport",
+        "name": "Cyberport",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-computeruniverse",
+        "name": "Computeruniverse",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-galaxus",
+        "name": "Galaxus",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-otto",
+        "name": "Otto",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-office-partner",
+        "name": "Office Partner",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-playox",
+        "name": "Playox",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-mediamarkt-de",
+        "name": "MediaMarkt.de",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-aorus-official-brand-store",
+        "name": "AORUS Official Brand Store",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-coolblue",
+        "name": "Coolblue",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "de-joybuy",
+        "name": "Joybuy",
+        "country": "DE",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "fr-amazon-fr",
+        "name": "Amazon.fr",
+        "country": "FR",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "fr-top-achat",
+        "name": "Top Achat",
+        "country": "FR",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "fr-grosbill",
+        "name": "Grosbill",
+        "country": "FR",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "fr-ldlc",
+        "name": "LDLC",
+        "country": "FR",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "fr-materiel-net",
+        "name": "Materiel.net",
+        "country": "FR",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "fr-cybertek",
+        "name": "Cybertek",
+        "country": "FR",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "fr-fnac",
+        "name": "FNAC",
+        "country": "FR",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "fr-aorus-official-brand-store",
+        "name": "AORUS Official Brand Store",
+        "country": "FR",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "it-amazon-it",
+        "name": "Amazon.it",
+        "country": "IT",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "it-nexths",
+        "name": "Nexths",
+        "country": "IT",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "it-unieuro",
+        "name": "Unieuro",
+        "country": "IT",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "it-aorus-official-brand-store",
+        "name": "AORUS Official Brand Store",
+        "country": "IT",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "es-amazon-es",
+        "name": "Amazon.es",
+        "country": "ES",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "es-neobyte",
+        "name": "Neobyte",
+        "country": "ES",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "es-pccomponentes",
+        "name": "Pccomponentes",
+        "country": "ES",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "es-coolmod",
+        "name": "Coolmod",
+        "country": "ES",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "es-game",
+        "name": "GAME",
+        "country": "ES",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "es-mediamarkt-es",
+        "name": "Mediamarkt.es",
+        "country": "ES",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "es-aorus-official-brand-store",
+        "name": "AORUS Official Brand Store",
+        "country": "ES",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "es-caseking",
+        "name": "Caseking",
+        "country": "ES",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "es-pc-box",
+        "name": "PC BOX",
+        "country": "ES",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "es-beep",
+        "name": "BEEP",
+        "country": "ES",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "es-app-inform-tica",
+        "name": "APP Informática",
+        "country": "ES",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "nl-megekko",
+        "name": "Megekko",
+        "country": "NL",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "nl-alternate-nl",
+        "name": "Alternate.nl",
+        "country": "NL",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "nl-azerty",
+        "name": "Azerty",
+        "country": "NL",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "nl-paradigit",
+        "name": "Paradigit",
+        "country": "NL",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "nl-bol-com",
+        "name": "Bol.com",
+        "country": "NL",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "nl-aorus-official-brand-store",
+        "name": "AORUS Official Brand Store",
+        "country": "NL",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "nl-joybuy",
+        "name": "Joybuy",
+        "country": "NL",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      },
+      {
+        "id": "nl-yourbuild",
+        "name": "YourBuild",
+        "country": "NL",
+        "url": "",
+        "validFrom": null,
+        "validTo": null
+      }
+    ],
+    "legacyFields": {
+      "dataPurpose": "q1-simulation",
+      "sourceTitle": "Q1 2026 Build Beyond",
+      "sourceTermsUpdatedAt": "2026-03-13 11:47 (timezone not stated)",
+      "sourceTermsScreenshot": "26Q1_Landing Page Screenshots/00 Other Pages/T&C/promotion.aorus.com_terms-and-conditions-promotion__country_promotion=12.png",
+      "sourceLandingScreenshots": "26Q1_Landing Page Screenshots/{DACH (AT, CH, DE),FR,IT,ES,NL}/*_LP Screenshot_2.png",
+      "sourceDocumentation": "docs/Q1-Template-Sources.md",
+      "sourceHero": "Top hero extracted from the supplied English Q1 T&C screenshot: rectangle (0,0,3272,1464), resized to 1920x859 JPEG. Existing artwork only; no generated or redesigned content.",
+      "sourceTermsSha256": "84BBC7F7B25D2C9E48791504B312054101DA7B2A9BD664CE74C43851339AB945",
+      "sourcePurchasePeriod": "2026-03-16 00:01 CET through 2026-03-28 23:59 CET",
+      "sourceClaimPeriod": "2026-03-30 00:01 CET through 2026-04-26 23:59 CET",
+      "sourceReviewTarget": "10 working days",
+      "sourcePaymentTarget": "90 days after claim validation",
+      "sourceMaximumCashbackEur": "180",
+      "sourceSameInvoice": "true",
+      "sourceMembershipRequired": "AORUS membership; same email as claim; manual verification in UAT",
+      "sourceProductCount": "59",
+      "sourceProductIdentifierAssumption": "IDs are normalized model names, not official SKUs. EANs are unavailable in the screenshots and remain empty. Series values are derived from visible model names.",
+      "sourceModelSpelling": "Preserves source table spellings including B850M EAGLE WF7 and B650 A ELITE AX ICE; owner should reconcile with product master before production.",
+      "sourceRetailerAssumption": "DE uses the DACH screenshot list excluding Digitec and Brack (Swiss-branded rows/logos). The source groups DE/AT/CH and does not prove per-country retailer eligibility. Remaining DE assignments are simulation assumptions requiring owner validation.",
+      "sourceRetailerUrls": "Empty: screenshot logo links were not supplied as URLs. No URL destinations have been invented.",
+      "sourceContentLanguage": "English operational paraphrase; original landing screenshots contain localized text. This sample does not claim complete translations.",
+      "sourceDateInterpretation": "Preserves literal CET (UTC+01:00) from source T&C even after the DST change. Confirm CET vs CEST before real use.",
+      "simulationAssumptions": "Budget EUR 100000; buffer EUR 5000; claim limit 1000; quantity limit 1 per model; support@example.test; manual membership checks; simulated email and payments.",
+      "templateVersion": "1"
+    }
+  }
+}

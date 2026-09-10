@@ -8,6 +8,15 @@ public static class CashbackOperationsModelBuilderExtensions
 {
     public static void ConfigureCashbackOperations(this ModelBuilder builder)
     {
+        builder.Entity<CampaignCatalogEntry>(b =>
+        {
+            b.ToTable(CashbackConsts.DbTablePrefix + "CampaignCatalogEntries", CashbackConsts.DbSchema);
+            b.ConfigureByConvention();
+            b.Property(x => x.Kind).IsRequired().HasMaxLength(16);
+            b.Property(x => x.NormalizedKey).IsRequired().HasMaxLength(128);
+            b.Property(x => x.DataJson).IsRequired().HasColumnType("text");
+            b.HasIndex(x => new { x.Kind, x.NormalizedKey }).IsUnique();
+        });
         builder.Entity<PaymentAttempt>(b =>
         {
             b.ToTable(CashbackConsts.DbTablePrefix + "PaymentAttempts", CashbackConsts.DbSchema);

@@ -8,6 +8,7 @@ import {
   type ReactNode,
 } from "react";
 import campaigns from "./locales/campaigns";
+import campaignConfiguration from "./locales/campaign-configuration";
 import { translations as claimsFinance } from "./locales/claims-finance";
 import { translations as reportsNotifications } from "./locales/reports-notifications";
 import { translations as common } from "./locales/common";
@@ -16,6 +17,7 @@ export type Locale = "en" | "zh-TW";
 const translations: Record<string, string> = {
   ...common,
   ...campaigns,
+  ...campaignConfiguration,
   ...claimsFinance,
   ...reportsNotifications,
 };

@@ -24,13 +24,19 @@ public class DevAuthController(IHostEnvironment environment, IConfiguration conf
             return NotFound();
         if (input.Area is not ("admin" or "public"))
             return BadRequest();
-        var identity = new ClaimsIdentity(new[] { new Claim(AbpClaimTypes.UserId, "99000000-0000-0000-0000-000000000001"), new Claim(AbpClaimTypes.UserName, "yoyo.chen"), new Claim(AbpClaimTypes.Email, "yoyo.chen@gigabyte.com"), new Claim(AbpClaimTypes.Role, input.Area == "admin" ? "cashback-dev-admin" : "cashback-dev-public") }, Scheme, AbpClaimTypes.UserName, AbpClaimTypes.Role);
+        // Both UAT applications share this cookie and development identity. Visiting
+        // the consumer sign-in must not silently downgrade an existing admin session.
+        // A consumer-only session still receives no administrative permissions.
+        var area = input.Area == "admin" ||
+            (User.Identity?.AuthenticationType == Scheme && CurrentUser.IsInRole("cashback-dev-admin"))
+            ? "admin" : "public";
+        var identity = new ClaimsIdentity(new[] { new Claim(AbpClaimTypes.UserId, "99000000-0000-0000-0000-000000000001"), new Claim(AbpClaimTypes.UserName, "yoyo.chen"), new Claim(AbpClaimTypes.Email, "yoyo.chen@gigabyte.com"), new Claim(AbpClaimTypes.Role, area == "admin" ? "cashback-dev-admin" : "cashback-dev-public") }, Scheme, AbpClaimTypes.UserName, AbpClaimTypes.Role);
         await HttpContext.SignInAsync(Scheme, new ClaimsPrincipal(identity), new AuthenticationProperties { ExpiresUtc = DateTimeOffset.UtcNow.AddHours(8), IsPersistent = false });
         return Ok(new
         {
             isAuthenticated = true,
             email = "yoyo.chen@gigabyte.com",
-            area = input.Area,
+            area,
             development = true
         });
     }

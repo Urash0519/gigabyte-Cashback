@@ -18,10 +18,14 @@ jobs:
       - name: Backend tests
         working-directory: backend/aspnet-core
         run: dotnet test Gigabyte.Cashback.slnx --verbosity minimal
+      - name: Configuration CSV and JSON tests
+        run: node --test frontend/apps/admin-web/tests/campaign-transfer.test.mjs
       - name: Build and migrate local stack
         run: docker compose up --build -d --wait
       - name: Verify business operations
         run: node scripts/verify-operations.mjs
+      - name: Verify configuration transfer and authorization
+        run: node scripts/verify-campaign-configuration.mjs
       - name: Container logs
         if: always()
         run: docker compose logs --no-color --tail 100

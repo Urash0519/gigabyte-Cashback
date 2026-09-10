@@ -15,3 +15,33 @@ html[lang="zh-TW"] body {
   padding: 7px 10px;
   color: #242424;
 }
+/* Compact campaign configuration editor. Public campaign layout is untouched. */
+.campaign-transfer { padding: 0 0 20px; margin-bottom: 18px; border-bottom: 1px solid #dce2ea; }
+.campaign-transfer h3, .campaign-rows h4 { margin: 8px 0; }
+.campaign-transfer .toolbar, .campaign-rows .toolbar, .bulk-toolbar { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+.campaign-transfer select, .campaign-rows select, .campaign-rows input:not([type=checkbox]):not([type=file]), .campaign-transfer input:not([type=file]) { min-height: 36px; padding: 7px 9px; border: 1px solid #cbd5e1; border-radius: 6px; background: white; color: #172b4d; }
+.file-button { position: relative; cursor: pointer; }
+.file-button input[type=file] { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
+.file-button:focus-within { outline: 2px solid #2062bc; outline-offset: 2px; }
+.import-preview { margin: 16px 0; padding: 18px; background: #f6f9fd; border: 1px solid #b8cce6; border-radius: 8px; }
+.configuration-diff { max-height: 330px; margin: 12px 0; }
+.configuration-diff pre { white-space: pre-wrap; overflow-wrap: anywhere; font-size: 12px; max-height: 160px; overflow: auto; max-width: 480px; margin: 0; }
+.bulk-toolbar { padding: 12px 0; }
+.bulk-toolbar span { flex-basis: 100%; color: #58677c; font-size: 13px; }
+.campaign-edit-table { max-height: 520px; }
+.campaign-edit-table table { min-width: 1050px; }
+.campaign-edit-table thead { position: sticky; top: 0; z-index: 1; background: #eef3f9; }
+.campaign-edit-table th { white-space: normal; min-width: 130px; font-size: 12px; }
+.campaign-edit-table th:first-child { min-width: 34px; width: 34px; }
+.campaign-edit-table td { padding: 7px 5px; }
+.campaign-edit-table td input:not([type=checkbox]), .campaign-edit-table td select { width: 100%; min-width: 112px; }
+.catalog-list { max-height: 300px; overflow: auto; margin: 12px 0; }
+.catalog-row { display: flex; align-items: center; gap: 12px; padding: 10px 6px; border-bottom: 1px solid #dce2ea; }
+.catalog-row small { display: block; color: #58677c; }
+.master-save { margin: 18px 0; border-top: 1px solid #dce2ea; padding-top: 16px; }
+.master-save summary { cursor: pointer; font-weight: 600; }
+.market-selection { display: flex; gap: 12px; flex-wrap: wrap; border: 1px solid #cbd5e1; border-radius: 6px; }
+.preflight-summary { display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap: 12px; }
+.preflight-summary div { padding: 12px; border: 1px solid #dce2ea; border-radius: 6px; }
+.preflight-summary dt { color: #58677c; font-size: 12px; }
+.preflight-summary dd { margin: 4px 0 0; overflow-wrap: anywhere; }

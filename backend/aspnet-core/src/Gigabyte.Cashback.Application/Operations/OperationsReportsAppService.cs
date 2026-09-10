@@ -76,6 +76,7 @@ public partial class OperationsAppService
     [DisableAuditing]
     public async Task<FileResultDto> ExportReportAsync(Guid? campaignId = null, string? market = null, DateTime? from = null, DateTime? to = null, string? dimension = null)
     {
+        await Permit(CashbackPermissions.Reports.Export);
         var report = await GetReportsAsync(campaignId, market, from, to);
         var rows = report.Rows.Where(row => string.IsNullOrWhiteSpace(dimension) || row.Dimension == dimension).ToList();
         static string Csv(object? value)

@@ -9,6 +9,7 @@ namespace Gigabyte.Cashback.Operations;
 
 public class CampaignInput
 {
+    [System.Text.Json.Serialization.JsonIgnore(Condition = System.Text.Json.Serialization.JsonIgnoreCondition.WhenWritingNull)]
     public string? ConcurrencyStamp
     {
         get; set;

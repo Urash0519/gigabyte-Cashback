@@ -1,5 +1,8 @@
 import { useLocale } from "./i18n";
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { CampaignRows } from "./CampaignRows";
+import { CampaignTransfer } from "./CampaignTransfer";
+import { configuration, downloadText, csvText, utcInputValue, effectiveCampaignRules } from "./campaign-transfer";
 
 const extraLabels: Record<string, string> = {
   id: "Retailer ID",
@@ -43,9 +46,12 @@ const extraLabels: Record<string, string> = {
 import {
   api,
   blankCampaign,
+  configurationApi,
   markets,
+  urls,
   type Campaign,
   type CampaignInput,
+  type ConfigurationValidation,
 } from "@gigabyte-cashback/api-client";
 import {
   Field,
@@ -71,6 +77,29 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
   const [search, setSearch] = useState("");
   const [compare, setCompare] = useState<string[]>([]);
   const [tab, setTab] = useState("Details");
+  const [preflight, setPreflight] = useState<{ fingerprint: string; result: ConfigurationValidation } | null>(null);
+  const [validationError, setValidationError] = useState("");
+  const fingerprint = JSON.stringify(configuration(draft));
+  const editorOpen = Boolean(editing);
+  const isDirty = editing === "new" || (editing !== null && fingerprint !== JSON.stringify(configuration(editing.data)));
+  const validated = preflight?.fingerprint === fingerprint;
+  const canPublish = validated && preflight.result.errors.length === 0 && !isDirty;
+  useEffect(() => {
+    if (!editorOpen) return;
+    let cancelled = false;
+    const timer = setTimeout(() => {
+      setValidationError("");
+      configurationApi.validate((JSON.parse(fingerprint) as { data: CampaignInput }).data).then(result => {
+        if (!cancelled) setPreflight({ fingerprint, result });
+      }).catch((error: Error) => { if (!cancelled) setValidationError(error.message); });
+    }, 450);
+    return () => { cancelled = true; clearTimeout(timer); };
+  }, [fingerprint, editorOpen]);
+  function changeRule(key: "maxClaimsPerHousehold" | "exclusivityGroup", value: string) {
+    const legacyFields = { ...draft.legacyFields };
+    delete legacyFields[key];
+    setDraft({ ...draft, [key]: key === "maxClaimsPerHousehold" ? Number(value) : value, legacyFields });
+  }
   function edit(c: Campaign | "new") {
     setEditing(c);
     setDraft(
@@ -134,8 +163,16 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
             </button>
           }
         >
+          <CampaignTransfer
+            key={editing === "new" ? "new" : editing.id}
+            draft={draft}
+            editing={editing}
+            busy={busy}
+            onImported={async (saved) => { edit(saved); await reload(); }}
+            onTemplate={(data) => { setEditing("new"); setDraft(data); setTab("Details"); }}
+          />
           <div className="tabs">
-            {["Details", "Products", "Retailers", "Content", "Versions"].map(
+            {["Details", "Products", "Retailers", "Content", "Preflight", "Versions"].map(
               (tabName) => (
                 <button
                   key={tabName}
@@ -182,20 +219,7 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                     </option>
                   ))}
                 </SelectField>
-                <Field
-                  label={t("Countries (comma-separated ISO codes)")}
-                  value={draft.markets.join(",")}
-                  onChange={(e) =>
-                    setDraft({
-                      ...draft,
-                      markets: e.target.value
-                        .toUpperCase()
-                        .split(",")
-                        .map((x) => x.trim()),
-                      market: e.target.value.split(",")[0].trim().toUpperCase(),
-                    })
-                  }
-                />
+                <fieldset className="market-selection"><legend>{t("Countries")}</legend>{markets.map(market => <label className="check" key={market}><input type="checkbox" checked={draft.markets.includes(market)} onChange={e => { const next = e.target.checked ? markets.filter(m => draft.markets.includes(m) || m === market) : draft.markets.filter(m => m !== market); setDraft({ ...draft, markets: next, market: next[0] || "" }); }} />{market}</label>)}</fieldset>
                 <Field
                   label={t("Languages (comma-separated)")}
                   value={draft.languages.join(",")}
@@ -227,7 +251,7 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                       ][i],
                     )}
                     type="datetime-local"
-                    value={draft[key].slice(0, 16)}
+                    value={utcInputValue(draft[key])}
                     required
                     onChange={(e) =>
                       setDraft({ ...draft, [key]: e.target.value + ":00Z" })
@@ -237,6 +261,8 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                 {field("waitingDays", "Waiting days", "number")}
                 {field("maxClaimsPerPerson", "Claims per person", "number")}
                 {field("maxItemsPerCategory", "Items per category", "number")}
+                <Field label={t("Claims per household")} type="number" min="1" value={effectiveCampaignRules(draft).maxClaimsPerHousehold} onChange={e => changeRule("maxClaimsPerHousehold", e.target.value)} />
+                <Field label={t("Mutually exclusive campaign group")} value={effectiveCampaignRules(draft).exclusivityGroup} onChange={e => changeRule("exclusivityGroup", e.target.value)} />
                 {field("claimLimit", "Claim capacity", "number")}
                 {(["budgetMinor", "bufferMinor"] as const).map((key) => (
                   <Field
@@ -263,8 +289,6 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                   "reviewSlaDays",
                   "supplementSlaDays",
                   "paymentSlaDays",
-                  "maxClaimsPerHousehold",
-                  "exclusivityGroup",
                   "owner",
                   "costCenter",
                   "year",
@@ -301,217 +325,8 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                 </label>
               </div>
             )}
-            {tab === "Products" && (
-              <>
-                <p className="muted">
-                  {" "}
-                  {t(
-                    "Eligible products and rewards are captured in each published version.",
-                  )}{" "}
-                </p>
-                {draft.products.map((p, i) => (
-                  <div className="line-item" key={i}>
-                    <div className="form-grid">
-                      {(
-                        ["id", "series", "category", "model", "ean"] as const
-                      ).map((key) => (
-                        <Field
-                          key={key}
-                          label={t(
-                            key === "id"
-                              ? "Product ID / SKU"
-                              : (extraLabels[key] ?? key),
-                          )}
-                          required={
-                            key === "id" ||
-                            key === "model" ||
-                            key === "category"
-                          }
-                          value={p[key]}
-                          onChange={(e) =>
-                            setDraft({
-                              ...draft,
-                              products: draft.products.map((v, n) =>
-                                n === i ? { ...v, [key]: e.target.value } : v,
-                              ),
-                            })
-                          }
-                        />
-                      ))}
-                      <Field
-                        label={t("Cashback ({currency})", {
-                          currency: draft.currency,
-                        })}
-                        type="number"
-                        min="0"
-                        step="0.01"
-                        value={p.cashbackMinor / 100}
-                        onChange={(e) =>
-                          setDraft({
-                            ...draft,
-                            products: draft.products.map((v, n) =>
-                              n === i
-                                ? {
-                                    ...v,
-                                    cashbackMinor: Math.round(
-                                      Number(e.target.value) * 100,
-                                    ),
-                                  }
-                                : v,
-                            ),
-                          })
-                        }
-                      />
-                      <Field
-                        label={t("Quantity limit")}
-                        type="number"
-                        min="1"
-                        value={p.quantityLimit}
-                        onChange={(e) =>
-                          setDraft({
-                            ...draft,
-                            products: draft.products.map((v, n) =>
-                              n === i
-                                ? {
-                                    ...v,
-                                    quantityLimit: Number(e.target.value),
-                                  }
-                                : v,
-                            ),
-                          })
-                        }
-                      />
-                    </div>
-                    <button
-                      type="button"
-                      className="button button-danger"
-                      onClick={() =>
-                        setDraft({
-                          ...draft,
-                          products: draft.products.filter((_, n) => n !== i),
-                        })
-                      }
-                    >
-                      {" "}
-                      {t("Remove product")}{" "}
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="button button-light"
-                  onClick={() =>
-                    setDraft({
-                      ...draft,
-                      products: [
-                        ...draft.products,
-                        {
-                          id: "",
-                          series: "",
-                          category: "Motherboard",
-                          model: "",
-                          ean: "",
-                          cashbackMinor: 0,
-                          quantityLimit: 1,
-                        },
-                      ],
-                    })
-                  }
-                >
-                  {" "}
-                  {t("Add product")}{" "}
-                </button>
-              </>
-            )}
-            {tab === "Retailers" && (
-              <>
-                {draft.retailers.map((p, i) => (
-                  <div className="line-item" key={i}>
-                    <div className="form-grid">
-                      {(["id", "name", "country", "url"] as const).map(
-                        (key) => (
-                          <Field
-                            key={key}
-                            label={t(extraLabels[key] ?? key)}
-                            value={p[key]}
-                            onChange={(e) =>
-                              setDraft({
-                                ...draft,
-                                retailers: draft.retailers.map((v, n) =>
-                                  n === i ? { ...v, [key]: e.target.value } : v,
-                                ),
-                              })
-                            }
-                          />
-                        ),
-                      )}
-                      {(["validFrom", "validTo"] as const).map((key) => (
-                        <Field
-                          key={key}
-                          label={t(
-                            key === "validFrom"
-                              ? "Valid from (UTC)"
-                              : "Valid until (UTC)",
-                          )}
-                          type="date"
-                          value={p[key]?.slice(0, 10) ?? ""}
-                          onChange={(e) =>
-                            setDraft({
-                              ...draft,
-                              retailers: draft.retailers.map((v, n) =>
-                                n === i
-                                  ? {
-                                      ...v,
-                                      [key]: e.target.value
-                                        ? e.target.value + "T00:00:00Z"
-                                        : null,
-                                    }
-                                  : v,
-                              ),
-                            })
-                          }
-                        />
-                      ))}
-                    </div>
-                    <button
-                      type="button"
-                      className="button button-danger"
-                      onClick={() =>
-                        setDraft({
-                          ...draft,
-                          retailers: draft.retailers.filter((_, n) => n !== i),
-                        })
-                      }
-                    >
-                      {" "}
-                      {t("Remove retailer")}{" "}
-                    </button>
-                  </div>
-                ))}
-                <button
-                  type="button"
-                  className="button button-light"
-                  onClick={() =>
-                    setDraft({
-                      ...draft,
-                      retailers: [
-                        ...draft.retailers,
-                        {
-                          id: "",
-                          name: "",
-                          country: markets[0],
-                          url: "",
-                          validFrom: null,
-                          validTo: null,
-                        },
-                      ],
-                    })
-                  }
-                >
-                  {" "}
-                  {t("Add retailer")}{" "}
-                </button>
-              </>
+            {(tab === "Products" || tab === "Retailers") && (
+              <CampaignRows key={`${editing === "new" ? "new" : editing.id}-${tab}`} kind={tab === "Products" ? "products" : "retailers"} draft={draft} onChange={setDraft} />
             )}
             {tab === "Content" && (
               <div className="form-grid">
@@ -558,6 +373,19 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                   ))}
                 </>
               ))}
+            {tab === "Preflight" && <section className="preflight">
+              <h3>{t("Draft readiness checklist")}</h3>
+              <p>{t("Draft summary uses the current editor, including unsaved changes. Publishing requires a saved draft and successful server validation.")}</p>
+              <dl className="preflight-summary"><div><dt>{t("Countries")}</dt><dd>{draft.markets.join(", ")} · {draft.currency}</dd></div><div><dt>{t("Products")}</dt><dd>{draft.products.length}</dd></div><div><dt>{t("Retailers")}</dt><dd>{draft.retailers.length}</dd></div><div><dt>{t("Purchase period")}</dt><dd>{draft.purchaseStart} – {draft.purchaseEnd}</dd></div><div><dt>{t("Claim period")}</dt><dd>{draft.claimStart} – {draft.claimEnd}</dd></div><div><dt>{t("Languages")}</dt><dd>{draft.languages.join(", ")}</dd></div></dl>
+              {validationError && <p className="error" role="alert">{validationError}</p>}
+              {!validated && !validationError && <p role="status">{t("Validating configuration…")}</p>}
+              {validated && <>
+                <p className={preflight.result.errors.length ? "error" : "success"}>{t("{errors} errors / {warnings} warnings", { errors: preflight.result.errors.length, warnings: preflight.result.warnings.length })}</p>
+                {[...preflight.result.errors.map(issue => ({ ...issue, severity: "Error" })), ...preflight.result.warnings.map(issue => ({ ...issue, severity: "Warning" }))].map((issue, i) => <p key={i}><b>{t(issue.severity)}</b> · <code>{issue.path}</code> — {issue.message}</p>)}
+                <button type="button" className="button button-light" onClick={() => downloadText("draft-preflight.csv", csvText(["severity", "path", "message"], [...preflight.result.errors.map(i => ({ ...i, severity: "error" })), ...preflight.result.warnings.map(i => ({ ...i, severity: "warning" }))]), "text/csv;charset=utf-8")}>{t("Download validation report")}</button>
+              </>}
+              {editing !== "new" && editing.publishedVersion > 0 && <p><a href={urls.public} target="_blank" rel="noreferrer">{t("Open public site (published content only; unsaved draft is not shown)")}</a></p>}
+            </section>}
             <div className="actions" style={{ marginTop: 24 }}>
               <button disabled={busy} className="button button-primary">
                 {" "}
@@ -565,11 +393,12 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
               </button>
             </div>
           </form>
+          <p className="muted" role="status">{isDirty ? t("Unsaved changes: save the draft before publishing.") : !validated ? t("Server validation pending. Review Preflight before publishing.") : preflight.result.errors.length ? t("Resolve the errors in Preflight before publishing.") : t("Saved draft is ready for publication. Review any Preflight warnings.")}</p>
           {editing !== "new" && (
             <ActionForm
               reasonLabel={t("Reason / reference")}
               label={t("Publish saved version")}
-              disabled={busy}
+              disabled={busy || !canPublish}
               onSubmit={(reason) =>
                 run(async () => {
                   const c = await api.publishCampaign(editing.id, reason);

@@ -4,6 +4,8 @@ Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。
 
 ## 本版功能
 
+- Q1 / P0：完整活動設定 JSON 匯入／匯出（草稿與發布版本）、匯入差異及錯誤預覽、明確新增／更新草稿、伺服器預檢、產品／通路 CSV 批次維護與可重用主檔。新增 EF migration；活動快照、案件與付款核心保持不變。詳見 [架構與操作決策](docs/P0-Campaign-Configuration.md)。
+- 提供 [Q1 完整設定範本](frontend/apps/admin-web/public/templates/q1-campaign.json)，含原圖 59 型號、46 通路、五國共用 EUR 表及原圖主視覺；資料庫模擬活動由 `node scripts/seed-q1.mjs` 建立。歷史範本與可測試日期副本分開，資料來源與假設見 [Q1 來源文件](docs/Q1-Template-Sources.md)。不含 Q4 A+B 加碼，也不新增前台版型設定。
 - 未送出草稿在開啟與送出前檢查最新發布版本，提示確認後保留資料與附件套用，並重新確認條款／隱私同意；已送出及補件案件保持送出時版本。
 - 前台提供 English／繁體中文切換並記住選擇；申請語言可選繁體中文。活動名稱、產品及條款原文仍依後台設定呈現。送出錯誤顯示於操作按鈕旁，自動捲動並聚焦提示。詳見 [草稿版本與語系](docs/Draft-Version-and-Language.md)。
 - 後台提供獨立 English／繁體中文切換，涵蓋總覽、活動、申請、付款、報表、通知、稽核與更正歷程；重新整理會保留語系。欄位值、狀態代碼及使用者輸入不因切換而變動。
@@ -23,7 +25,7 @@ Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。
 - [UAT 前台](https://cashback-uat-219894818230.asia-east1.run.app/)／[UAT 後台](https://cashback-uat-219894818230.asia-east1.run.app/admin/)
 - 依使用者最新決策，UAT 移除入口密碼，任何人可直接開啟前後台，再按「開發環境登入」使用模擬身份 `yoyo.chen@gigabyte.com`。不需要 Google 帳號或 UAT 密碼。
 - 所有人共用模擬身份與案件，任何訪客都能透過按鈕取得測試後台操作權限。此為明確選擇的公開 UAT 行為，僅使用測試資料；正式登入與銀行 API 仍未串接。Cloud SQL、Storage 與加密秘密仍透過原有服務身份存取。
-- 已完成 ABP migration 與 24 項 GCP HTTP 業務流程驗證。Cloud SQL 目前開機；測試後執行 `./deploy/gcp/uat/power.ps1 -Action stop`，下次使用前執行 `-Action start`。停止 SQL 保留資料，但網站資料操作會暫停；儲存空間仍計費。
+- 已完成 ABP migration、24 項 GCP HTTP 業務流程與 12 項設定／權限驗證。Q1 模擬活動已在雲端資料庫發布（59 型號／46 通路），可直接在後台搜尋 `Q1 Build Beyond`。Cloud SQL 目前開機；測試後執行 `./deploy/gcp/uat/power.ps1 -Action stop`，下次使用前執行 `-Action start`。停止 SQL 保留資料，但網站資料操作會暫停；儲存空間仍計費。
 
 ## 本機啟動
 
@@ -48,7 +50,7 @@ node scripts/verify-operations.mjs
 | Swagger | http://localhost:44305/swagger |
 | API health | http://localhost:44305/health |
 
-先開後台按 **Sign in for development**。按鈕透過伺服器 Cookie 建立固定身份 `yoyo.chen@gigabyte.com`，前台與後台均可使用；同一瀏覽器共用 Cookie，切換身份區域後可重新按登入。期限 8 小時。Google OAuth 尚未串接，不建立另一套密碼帳號。DevelopmentAuth 必須明確啟用且 ASPNETCORE_ENVIRONMENT 必須為 Development；Production 不提供此登入。
+先開後台按 **Sign in for development**。按鈕透過伺服器 Cookie 建立固定身份 `yoyo.chen@gigabyte.com`，期限 8 小時。同一瀏覽器共用 Cookie：已有 admin 身份時登入前台不再降級；任一端登出會共用登出，後台視窗重新取得焦點時同步登入狀態。單獨登入前台仍無後台權限。Google OAuth 尚未串接，不建立另一套密碼帳號。DevelopmentAuth 必須明確啟用且 ASPNETCORE_ENVIRONMENT 必須為 Development；Production 不提供此登入。
 
 容器持久化 PostgreSQL、BLOB 與 Data Protection key。`docker compose down` 保留資料 volume；不要任意刪除 volume。只輸入合成測試資料。
 
@@ -84,15 +86,18 @@ dotnet test Gigabyte.Cashback.slnx
 
 `scripts/verify-operations.mjs` 會新增有唯一名稱的合成 Campaign／Claim／Payment，驗證真實 HTTP／PostgreSQL／BLOB 路徑；不會呼叫銀行，也不會發送 Email。測試資料保留供檢視。GitHub Actions 執行後端測試、Compose 建置及同一腳本。
 
+`node scripts/verify-campaign-configuration.mjs` 另驗證 Q1 預檢、完整 JSON 往返、發布版本不變、過期版本戳記拒絕、無效匯入零寫入、主檔原子性與前後台共用 Cookie 權限。`node scripts/seed-q1.mjs` 僅建立／首次發布具明確模擬標記的 Q1 活動，重跑不覆寫營運修改。兩者預設 localhost:44305，雲端需明確設定 `CASHBACK_API_URL`。
+
 ## 尚未串接與正式使用界線
 
-驗證：前後台型別檢查及 Docker 建置通過、既有後端 29 項測試通過、GCP HTTP／PostgreSQL 整合 24 項通過；新版免密碼入口、後台中文切換／偏好記憶／未儲存內容保留與前後台資源驗證完成。初版歷史驗證見 [Phase 1 驗證紀錄](docs/Phase1-Verification.md)，最新雲端結果見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
+本次 P0 驗證：後端 42 項（5 Domain + 37 EF）、CSV／JSON／舊規則 13 項測試通過；前後台型別檢查、Docker 與 Cloud Build 建置通過；GCP 24 項業務流程、12 項設定／權限及匿名入口檢查通過。瀏覽器確認 Q1 JSON 真實檔案匯入→儲存草稿→資料庫、產品搜尋／批次套用、未儲存發布阻擋、雲端範本與 Q1 前台素材。細節見 [P0 驗證紀錄](docs/P0-Verification.md)，最新雲端結果見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
 
 - 依本次範圍排除 Google OAuth、銀行／付款供應商 API、Webhook、真實自動付款。
 - 通知目前保存佇列、模板／處理紀錄並提供 **Simulate**，不代表已寄出；實際 SMTP／郵件供應商尚未配置。
 - 文件檢查格式、magic bytes、8 MiB、最多 20 份及案件歸屬；安全檢查由人工 evidence check 承接，未接外部掃毒引擎。
 - 產品、會員、RMA API 與 OCR 未串接；本版使用受控設定與人工檢核。
 - 五國正式矩陣、翻譯、時區／SLA、付款人／交付檔格式、保存政策、Google 正式授權、容量及備援演練仍需正式環境核定。可配置樣本不代表已核准營運政策。
+- P0 以五國共用 EUR 回饋表實作；工作日 SLA、各國內容／金額變體、A+B 加碼與前台版型配置尚未加入。預覽為草稿摘要＋已發布網站連結，不是未發布內容即時視覺預覽。仍需由 Campaign Owner 實測建置時間，不宣稱已達成 30–60 分鐘業務驗收目標。
 - `deploy/gcp/uat/` 為本次 UAT 設定；原 `deploy/gcp/cloud-run/` 保留正式部署參考模板。GitHub push 不代表 UAT 驗證已完成或正式環境上線。
 
 ## 文件與原型

@@ -125,6 +125,7 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
     public async Task<CampaignDto> CreateCampaignAsync(CampaignInput input)
     {
         await Permit(CashbackPermissions.Campaigns.Manage);
+        EnsureValidConfiguration(input, false);
         ValidateBudget(input, 0);
         var c = new Campaign(GuidGenerator.Create()) { Name = input.Name, DraftJson = Encode(input), BudgetMinor = input.BudgetMinor, BufferMinor = input.BufferMinor };
         await campaigns.InsertAsync(c);
@@ -134,6 +135,7 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
     public async Task<CampaignDto> SaveCampaignAsync(Guid id, CampaignInput input)
     {
         await Permit(CashbackPermissions.Campaigns.Manage);
+        EnsureValidConfiguration(input, false);
         var c = await campaigns.GetAsync(id);
         Require(!string.IsNullOrWhiteSpace(input.ConcurrencyStamp) && input.ConcurrencyStamp == c.ConcurrencyStamp, "Campaign changed; reload before saving.");
         await EnsureCurrencyAsync(c, input.Currency);
@@ -166,6 +168,7 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
         Require(!string.IsNullOrWhiteSpace(input.Reason), "Publication reason is required.");
         var c = await campaigns.GetAsync(id);
         var d = Decode<CampaignInput>(c.DraftJson);
+        EnsureValidConfiguration(d, true);
         await EnsureCurrencyAsync(c, d.Currency);
         ValidateBudget(d, c.ReservedMinor + c.ApprovedMinor + c.PaidMinor);
         Require(d.PurchaseStart <= d.PurchaseEnd && d.ClaimStart <= d.ClaimEnd && d.ClaimEnd >= d.PurchaseEnd && d.WaitingDays >= 0, "Invalid campaign dates.");

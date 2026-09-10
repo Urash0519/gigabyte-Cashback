@@ -75,3 +75,4 @@ export const foundationApi = {
 
 export * from "./operations";
 export * from "./finance";
+export * from "./configuration";

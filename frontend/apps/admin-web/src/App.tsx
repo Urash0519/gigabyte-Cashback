@@ -69,6 +69,14 @@ export function App() {
       })
       .catch((e) => setError(e.message));
   }, [reload]);
+  useEffect(() => {
+    // Synchronize shared-cookie sign-out without reloading/discarding an admin draft.
+    const refreshSession = () => {
+      void api.session().then(setSession).catch((e: Error) => setError(e.message));
+    };
+    window.addEventListener("focus", refreshSession);
+    return () => window.removeEventListener("focus", refreshSession);
+  }, []);
   const logged = Boolean(session?.isAuthenticated && session.area === "admin");
   return (
     <>

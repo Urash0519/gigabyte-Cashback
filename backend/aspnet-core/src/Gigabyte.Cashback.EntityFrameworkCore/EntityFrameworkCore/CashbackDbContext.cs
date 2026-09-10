@@ -32,6 +32,7 @@ public class CashbackDbContext :
     public DbSet<NotificationOutboxMessage> NotificationOutboxMessages { get; set; }
     public DbSet<StoredFileRecord> StoredFileRecords { get; set; }
     public DbSet<Campaign> Campaigns { get; set; }
+    public DbSet<CampaignCatalogEntry> CampaignCatalogEntries { get; set; }
     public DbSet<CampaignVersion> CampaignVersions { get; set; }
     public DbSet<ClaimRecord> Claims { get; set; }
     public DbSet<ClaimRevision> ClaimRevisions { get; set; }

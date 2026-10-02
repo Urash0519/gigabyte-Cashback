@@ -186,6 +186,7 @@ public class BankInput
 }
 public class ClaimItemInput
 {
+    public string ItemId { get; set; } = "";
     public DateTime? PurchaseDate
     {
         get; set;
@@ -197,6 +198,7 @@ public class ClaimItemInput
 }
 public class EvidenceDto
 {
+    public string ItemId { get; set; } = "";
     public Guid Id
     {
         get; set;
@@ -382,7 +384,11 @@ public class ReportRowDto
 [DisableAuditing]
 public class EvidenceUploadInput
 {
-    public string FileName { get; set; } = ""; public string Kind { get; set; } = "Invoice"; public string ProductId { get; set; } = ""; public byte[] Content { get; set; } = [];
+    public string FileName { get; set; } = ""; public string Kind { get; set; } = "Invoice"; public string ProductId { get; set; } = ""; public string ItemId { get; set; } = ""; public byte[] Content { get; set; } = [];
+}
+public class ReviewChecksInput
+{
+    public Dictionary<string, string> Passed { get; set; } = [];
 }
 public class FileResultDto
 {
@@ -427,6 +433,7 @@ public partial interface IOperationsAppService : IApplicationService
     Task<ClaimDto> SaveClaimAsync(Guid id, ClaimInput input);
     Task<ClaimDto> SubmitClaimAsync(Guid id);
     Task<ClaimDto> ClaimActionAsync(Guid id, ActionInput input);
+    Task<ClaimDto> SaveReviewChecksAsync(Guid id, ReviewChecksInput input);
     Task<EvidenceDto> UploadEvidenceAsync(Guid id, EvidenceUploadInput input);
     Task<FileResultDto> GetEvidenceAsync(Guid id, Guid fileId);
     Task<List<PaymentDto>> GetPaymentsAsync();

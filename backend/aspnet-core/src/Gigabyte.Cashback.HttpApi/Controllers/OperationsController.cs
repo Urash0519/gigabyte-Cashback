@@ -29,11 +29,16 @@ public partial class OperationsController(IOperationsAppService service) : AbpCo
     [HttpPost("claims/{id:guid}/action")] public Task<ClaimDto> ClaimAction(Guid id, ActionInput input) => service.ClaimActionAsync(id, input);
     [DisableAuditing, HttpPost("claims/{id:guid}/evidence"), RequestSizeLimit(12 * 1024 * 1024)] public Task<EvidenceDto> Evidence(Guid id, EvidenceUploadInput input) => service.UploadEvidenceAsync(id, input);
     [HttpGet("claims/{id:guid}/evidence/{fileId:guid}")]
-    public async Task<IActionResult> Download(Guid id, Guid fileId)
+    public async Task<IActionResult> Download(Guid id, Guid fileId, bool download = false)
     {
         var f = await service.GetEvidenceAsync(id, fileId);
-        return File(f.Content, f.ContentType, f.FileName);
+        Response.Headers["X-Content-Type-Options"] = "nosniff";
+        if (download) return File(f.Content, f.ContentType, f.FileName);
+        Response.Headers["Content-Disposition"] = "inline";
+        return File(f.Content, f.ContentType);
     }
+    [HttpPost("claims/{id:guid}/review-checks")]
+    public Task<ClaimDto> SaveReviewChecks(Guid id, ReviewChecksInput input) => service.SaveReviewChecksAsync(id, input);
     [HttpGet("payments")] public Task<List<PaymentDto>> Payments() => service.GetPaymentsAsync();
     [HttpPost("payments")] public Task<List<PaymentDto>> CreatePayments(PaymentInput input) => service.CreatePaymentsAsync(input);
     [HttpPost("payments/{id:guid}/action")] public Task<PaymentDto> PaymentAction(Guid id, ActionInput input) => service.PaymentActionAsync(id, input);

@@ -1,5 +1,5 @@
 import { useLocale } from "./i18n";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Revisions } from "./Revisions";
 import {
   api,
@@ -17,6 +17,7 @@ import {
   date,
   ActionForm,
 } from "@gigabyte-cashback/ui";
+const requiredChecks = ["membership", "invoice", "serial", "eligibility", "duplicates", "rma", "evidence"];
 type Props = {
   claims: Claim[];
   campaigns: Campaign[];
@@ -30,13 +31,32 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState("All");
   const [market, setMarket] = useState("");
-  const [action, setAction] = useState("check");
-  const [check, setCheck] = useState("membership");
+  const [action, setAction] = useState("approve");
+  const [pendingChecks, setPendingChecks] = useState<string[]>([]);
+  const [previewId, setPreviewId] = useState("");
+  useEffect(() => { setPendingChecks([]); setPreviewId(""); }, [id]);
+  useEffect(() => {
+    if (!previewId) return;
+    const close = (event: KeyboardEvent) => { if (event.key === "Escape") setPreviewId(""); };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [previewId]);
   const c = claims.find((c) => c.id === id);
   const campaign = campaigns.find((p) => p.id === c?.data.campaignId);
   const version =
     campaign?.versions.find((v) => v.id === c?.campaignVersionId)?.data ??
     campaign?.data;
+  const latestSubmission = [...(c?.history ?? [])].reverse().find((event) => event.action === "Submitted")?.createdAt ?? "";
+  const completedChecks = new Set((c?.history ?? []).filter((event) => event.createdAt >= latestSubmission && event.action.startsWith("Check:")).map((event) => event.action.slice(6)));
+  const historyRounds = (c?.history ?? []).reduce<Array<{ label: string; events: Claim["history"] }>>((rounds, event) => {
+    if (event.action === "Submitted" || !rounds.length) rounds.push({ label: event.action === "Submitted" ? event.createdAt : "Draft", events: [] });
+    rounds[rounds.length - 1].events.push(event);
+    return rounds;
+  }, []);
+  const preview = c?.data.attachments.find((a) => a.id === previewId);
+  const activeEvidence = c?.data.attachments.filter((attachment) => attachment.kind === "Invoice" || c.data.items.some((item) =>
+    item.productId === attachment.productId && (attachment.itemId ? attachment.itemId === item.itemId : c.data.items.filter((candidate) => candidate.productId === attachment.productId).length === 1),
+  )) ?? [];
   const rows = claims.filter(
     (c) =>
       (status === "All" ||
@@ -271,16 +291,13 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                 </div>
               </Panel>
               <Panel title={t("Evidence")}>
-                {c.data.attachments.length ? (
-                  c.data.attachments.map((a) => (
+                {activeEvidence.length ? (
+                  activeEvidence.map((a) => (
                     <div className="line-item" key={a.id}>
-                      <a
-                        href={api.downloadEvidence(c.id, a.id)}
-                        target="_blank"
-                        rel="noreferrer"
-                      >
-                        {a.fileName}
-                      </a>{" "}
+                      {/\.(jpe?g|png|pdf)$/i.test(a.fileName) ? (
+                        <button type="button" className="link-button" onClick={() => setPreviewId(a.id)}>{a.fileName}</button>
+                      ) : <span>{a.fileName}</span>}{" "}
+                      <a href={api.downloadEvidence(c.id, a.id, true)}>{t("Download")}</a>{" "}
                       <Badge label={t(a.kind)}>{a.kind}</Badge>
                       <p>
                         <small>
@@ -308,6 +325,22 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
               </Panel>
             </div>
             <div>
+              <Panel title={t("Required checks")}>
+                <p>{completedChecks.size} / {requiredChecks.length} {t("completed after latest submission")}</p>
+                <div className="review-checklist">
+                  {requiredChecks.map((key) => (
+                    <label key={key} className="review-check">
+                      <input type="checkbox" disabled={busy || completedChecks.has(key)} checked={completedChecks.has(key) || pendingChecks.includes(key)} onChange={(e) => setPendingChecks((current) => e.target.checked ? [...current, key] : current.filter((value) => value !== key))} />
+                      <span>{t(key)} {completedChecks.has(key) && `✓ ${t("Recorded")}`}</span>
+                    </label>
+                  ))}
+                </div>
+                <button type="button" className="button button-primary" disabled={busy || !pendingChecks.length || !["Submitted", "UnderReview"].includes(c.reviewStatus)} onClick={() => run(async () => {
+                  await api.saveReviewChecks(c.id, Object.fromEntries(pendingChecks.map((key) => [key, "Reviewed and passed in checklist"])));
+                  setPendingChecks([]);
+                  await reload();
+                }, t("Checks recorded in case history."))}>{t("Save selected checks")}</button>
+              </Panel>
               <Panel title={t("Review action")}>
                 <p className="muted">
                   {t(
@@ -320,7 +353,6 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                   onChange={(e) => setAction(e.target.value)}
                 >
                   {[
-                    ["check", "Record a passed check"],
                     ["approve", "Approve"],
                     ["reject", "Reject"],
                     ["supplement", "Request more information"],
@@ -334,27 +366,6 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                     </option>
                   ))}
                 </SelectField>
-                {action === "check" && (
-                  <SelectField
-                    label={t("Required check")}
-                    value={check}
-                    onChange={(e) => setCheck(e.target.value)}
-                  >
-                    {[
-                      "membership",
-                      "invoice",
-                      "serial",
-                      "eligibility",
-                      "duplicates",
-                      "rma",
-                      "evidence",
-                    ].map((x) => (
-                      <option key={x} value={x}>
-                        {t(x)}
-                      </option>
-                    ))}
-                  </SelectField>
-                )}
                 <ActionForm
                   reasonLabel={t("Reason / reference")}
                   label={t("Record action")}
@@ -363,14 +374,19 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                     act({
                       action,
                       reason,
-                      value: action === "check" ? check : "",
+                      value: "",
                     })
                   }
                 />
               </Panel>
               <Panel title={t("Case history")}>
-                <ol className="timeline">
-                  {[...c.history].reverse().map((e) => (
+                {[...historyRounds].reverse().map((round, roundIndex) => {
+                  const checks = round.events.filter((event) => event.action.startsWith("Check:"));
+                  return <section className="history-round" key={round.label + roundIndex}>
+                    <h3>{round.label === "Draft" ? t("Draft activity") : `${t("Submission round")} ${historyRounds.length - roundIndex - (historyRounds[0]?.label === "Draft" ? 1 : 0)} · ${date(round.label)}`}</h3>
+                    {checks.length > 0 && <details className="history-checks"><summary>{t("Required checks")} · {new Set(checks.map((event) => event.action)).size} / 7</summary><ol className="timeline">{[...checks].reverse().map((event) => <li key={event.id}><b>{t(event.action.slice(6))}</b><p>{event.reason}</p><time>{date(event.createdAt)} · {event.actor}</time></li>)}</ol></details>}
+                    <ol className="timeline">
+                  {[...round.events].filter((event) => !event.action.startsWith("Check:")).reverse().map((e) => (
                     <li key={e.id}>
                       <b>
                         {e.action.startsWith("Check:")
@@ -387,6 +403,8 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                     </li>
                   ))}
                 </ol>
+                  </section>;
+                })}
               </Panel>
               <Revisions claim={c} />
               <Panel title={t("Rule snapshot")}>
@@ -403,6 +421,13 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
               </Panel>
             </div>
           </div>
+          {preview && <div className="evidence-overlay" role="presentation" onClick={() => setPreviewId("")}>
+            <div className="evidence-preview" role="dialog" aria-modal="true" aria-label={preview.fileName} onClick={(event) => event.stopPropagation()}>
+              <header><strong>{preview.fileName}</strong><button type="button" autoFocus className="button button-light" onClick={() => setPreviewId("")}>{t("Close")}</button></header>
+              {/\.pdf$/i.test(preview.fileName) ? <iframe title={preview.fileName} src={api.downloadEvidence(c.id, preview.id)} /> : <img src={api.downloadEvidence(c.id, preview.id)} alt={preview.fileName} />}
+              <a href={api.downloadEvidence(c.id, preview.id, true)}>{t("Download")}</a>
+            </div>
+          </div>}
         </>
       )}
     </>

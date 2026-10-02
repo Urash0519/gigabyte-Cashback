@@ -24,6 +24,8 @@ export const translations: Record<string, string> = {
   "Eligible products and serial numbers are required.":
     "請至少加入一項適用產品，並填寫每項產品的序號。",
   "Category quantity limit exceeded.": "同類別產品數量超過活動上限。",
+  maximum: "上限",
+  "Product evidence removed after changing products. Upload evidence for the selected product.": "更換或移除產品後，原序號照片已移出本次申請。請為目前選取的產品上傳照片。",
   "Product quantity limit exceeded.": "此產品數量超過活動上限。",
   "Duplicate serial in claim.": "申請內有重複序號，請檢查各項產品的序號。",
   "Product purchase date is not eligible.":

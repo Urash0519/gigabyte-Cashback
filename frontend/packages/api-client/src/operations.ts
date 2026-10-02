@@ -85,6 +85,7 @@ export type Bank = {
 };
 export type Evidence = {
   id: string;
+  itemId?: string;
   fileName: string;
   kind: string;
   productId: string;
@@ -92,6 +93,7 @@ export type Evidence = {
   size: number;
 };
 export type ClaimItem = {
+  itemId?: string;
   purchaseDate?: string | null;
   retailerId?: string;
   productId: string;
@@ -315,7 +317,9 @@ export const api = {
     post<Claim>(`/api/operations/claims/${id}/submit`),
   claimAction: (id: string, action: Action) =>
     post<Claim>(`/api/operations/claims/${id}/action`, action),
-  upload: async (id: string, file: File, kind: string, productId = "") => {
+  saveReviewChecks: (id: string, passed: Record<string, string>) =>
+    post<Claim>(`/api/operations/claims/${id}/review-checks`, { passed }),
+  upload: async (id: string, file: File, kind: string, productId = "", itemId = "") => {
     const content = await new Promise<string>((resolve, reject) => {
       const reader = new FileReader();
       reader.onload = () => resolve(String(reader.result).split(",")[1]);
@@ -326,11 +330,12 @@ export const api = {
       fileName: file.name,
       kind,
       productId,
+      itemId,
       content,
     });
   },
-  downloadEvidence: (id: string, fileId: string) =>
-    `${base}/api/operations/claims/${id}/evidence/${fileId}`,
+  downloadEvidence: (id: string, fileId: string, download = false) =>
+    `${base}/api/operations/claims/${id}/evidence/${fileId}${download ? "?download=true" : ""}`,
   payments: () => apiRequest<Payment[]>("/api/operations/payments"),
   createPayments: (claimIds: string[], reason: string) =>
     post<Payment[]>("/api/operations/payments", { claimIds, reason }),

@@ -417,6 +417,23 @@ tr:last-child td {
   padding: 0 0 18px 18px;
   margin-left: 6px;
 }
+.history-round {
+  border: 1px solid #d7e0e5;
+  border-radius: 12px;
+  padding: 16px;
+  margin: 0 0 16px;
+  background: #fff;
+}
+.history-round h3 { margin: 0 0 14px; font-size: 1rem; }
+.history-round .timeline li { margin-bottom: 10px; padding: 8px 12px; background: #f6f8fa; border-radius: 0 8px 8px 0; }
+.history-checks { margin-bottom: 14px; }
+.history-checks summary { cursor: pointer; font-weight: 600; }
+.review-checklist { display: grid; gap: 8px; margin: 14px 0; }
+.review-check { display: flex; align-items: center; gap: 10px; padding: 8px 10px; border: 1px solid #d7e0e5; border-radius: 8px; }
+.evidence-overlay { position: fixed; inset: 0; z-index: 1000; background: #000a; display: grid; place-items: center; padding: 20px; }
+.evidence-preview { width: min(100%, 1000px); height: min(90vh, 900px); padding: 16px; background: #fff; border-radius: 12px; display: flex; flex-direction: column; gap: 12px; }
+.evidence-preview header { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.evidence-preview img, .evidence-preview iframe { width: 100%; min-height: 0; flex: 1; object-fit: contain; border: 0; }
 .timeline p {
   margin: 6px 0;
 }

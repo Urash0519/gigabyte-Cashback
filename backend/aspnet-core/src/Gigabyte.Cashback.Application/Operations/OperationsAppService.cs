@@ -254,6 +254,9 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
     }
     private void StoreInput(ClaimRecord c, ClaimInput input)
     {
+        foreach (var item in input.Items)
+            if (string.IsNullOrWhiteSpace(item.ItemId)) item.ItemId = Guid.NewGuid().ToString("N");
+        Require(input.Items.Select(i => i.ItemId).Distinct().Count() == input.Items.Count, "Product entries must be distinct.");
         input.Bank.BankCountry = input.BankCountry;
         if (!input.Bank.Iban.Contains('*') && !input.Bank.AccountNumber.Contains('*'))
             c.BankCiphertext = encryption.Encrypt(Encode(input.Bank))!;
@@ -268,7 +271,19 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
         Require(c.ReviewStatus is "Draft" or "MoreInfoRequired", "Only draft or requested supplement can be changed.");
         Require(input.CampaignId == c.CampaignId, "Campaign cannot change.");
         var previous = Decode<ClaimInput>(c.DataJson);
-        input.Attachments = previous.Attachments;
+        // Preserve only evidence still attached to an unchanged claim line.
+        input.Attachments = previous.Attachments.Where(a => a.Kind == "Invoice" || input.Items.Any(i =>
+            i.ProductId == a.ProductId &&
+            (!string.IsNullOrWhiteSpace(a.ItemId) ? i.ItemId == a.ItemId :
+                previous.Items.Count(p => p.ProductId == a.ProductId) == 1 &&
+                input.Items.Count(p => p.ProductId == a.ProductId) == 1))).ToList();
+        foreach (var item in input.Items)
+            if (string.IsNullOrWhiteSpace(item.ItemId)) item.ItemId = Guid.NewGuid().ToString("N");
+        Require(input.Items.Select(i => i.ItemId).Distinct().Count() == input.Items.Count, "Product entries must be distinct.");
+        foreach (var attachment in input.Attachments.Where(a => a.Kind == "SerialNumber" && string.IsNullOrWhiteSpace(a.ItemId)))
+            attachment.ItemId = input.Items.Single(i => i.ProductId == attachment.ProductId).ItemId;
+        foreach (var removed in previous.Attachments.ExceptBy(input.Attachments.Select(a => a.Id), a => a.Id))
+            await Log(id, "EvidenceRemoved", $"Evidence {removed.Id} removed from active claim");
         if (c.ReviewStatus == "MoreInfoRequired")
         {
             Require(!string.IsNullOrWhiteSpace(input.ChangeReason), "A correction reason is required.");
@@ -303,7 +318,7 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
         Require(v.Retailers.Any(r => r.Id == d.RetailerId && r.Country == d.PurchaseCountry && (!r.ValidFrom.HasValue || r.ValidFrom.Value.Date <= d.PurchaseDate.Date) && (!r.ValidTo.HasValue || r.ValidTo.Value.Date >= d.PurchaseDate.Date)), "Retailer is not eligible.");
         var bank = Decode<BankInput>(encryption.Decrypt(c.BankCiphertext)!);
         Require(!string.IsNullOrWhiteSpace(bank.AccountHolder) && (!string.IsNullOrWhiteSpace(bank.Iban) || !string.IsNullOrWhiteSpace(bank.AccountNumber)), "Bank account holder and account are required.");
-        Require(d.Attachments.Any(x => x.Kind == "Invoice") && d.Items.All(i => d.Attachments.Any(x => x.Kind == "SerialNumber" && x.ProductId == i.ProductId)), "Invoice and each product serial photo are required.");
+        Require(d.Attachments.Any(x => x.Kind == "Invoice") && d.Items.All(i => d.Attachments.Any(x => x.Kind == "SerialNumber" && x.ItemId == i.ItemId && x.ProductId == i.ProductId)), "Invoice and each product serial photo are required.");
         Require(d.Items.Count > 0 && d.Items.All(i => v.Products.Any(p => p.Id == i.ProductId)) && d.Items.All(i => !string.IsNullOrWhiteSpace(i.SerialNumber)), "Eligible products and serial numbers are required.");
         Require(d.Items.GroupBy(i => v.Products.Single(p => p.Id == i.ProductId).Category).All(g => g.Count() <= v.MaxItemsPerCategory), "Category quantity limit exceeded.");
         Require(d.Items.GroupBy(i => i.ProductId).All(g => g.Count() <= v.Products.Single(p => p.Id == g.Key).QuantityLimit), "Product quantity limit exceeded.");
@@ -461,6 +476,23 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
             await Notify(c, "Claim update " + c.Reference);
         return await ClaimDto(c);
     }
+    private static readonly string[] RequiredChecks = ["membership", "invoice", "serial", "eligibility", "duplicates", "rma", "evidence"];
+    [UnitOfWork(isTransactional: true)]
+    public async Task<ClaimDto> SaveReviewChecksAsync(Guid id, ReviewChecksInput input)
+    {
+        await Permit(CashbackPermissions.Claims.Review);
+        var c = await claims.GetAsync(id);
+        Require(c.ReviewStatus is "Submitted" or "UnderReview", "Checks require an active review.");
+        Require(input.Passed.Count > 0 && input.Passed.Keys.All(RequiredChecks.Contains), "Unknown check.");
+        foreach (var (key, reason) in input.Passed)
+        {
+            Require(!string.IsNullOrWhiteSpace(reason), "A reason is required.");
+            await Log(id, "Check:" + key, reason);
+        }
+        c.ReviewStatus = "UnderReview";
+        await claims.UpdateAsync(c);
+        return await ClaimDto(c);
+    }
     [DisableAuditing]
     public async Task<EvidenceDto> UploadEvidenceAsync(Guid id, EvidenceUploadInput input)
     {
@@ -480,12 +512,16 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
         Require(magic, "File signature does not match extension.");
         Require(input.Kind is "Invoice" or "SerialNumber", "Unknown evidence kind.");
         var d = Decode<ClaimInput>(c.DataJson);
+        if (input.Kind == "SerialNumber" && string.IsNullOrWhiteSpace(input.ItemId))
+            input.ItemId = d.Items.Count(i => i.ProductId == input.ProductId) == 1 ? d.Items.Single(i => i.ProductId == input.ProductId).ItemId : "";
+        if (input.Kind == "SerialNumber")
+            Require(!string.IsNullOrWhiteSpace(input.ItemId) && d.Items.Any(i => i.ItemId == input.ItemId && i.ProductId == input.ProductId), "Evidence must match a claim product.");
         Require(d.Attachments.Count < 20, "Maximum 20 evidence files per claim.");
         var fileId = GuidGenerator.Create();
         var name = $"claims/{id:N}/{fileId:N}{ext}";
         await blobs.SaveAsync(name, bytes);
         await files.InsertAsync(new StoredFileRecord(fileId, name, Path.GetFileName(input.FileName), "application/octet-stream", bytes.Length, Convert.ToHexString(SHA256.HashData(bytes))));
-        var evidence = new EvidenceDto { Id = fileId, FileName = Path.GetFileName(input.FileName), Kind = input.Kind, ProductId = input.ProductId, Size = bytes.Length };
+        var evidence = new EvidenceDto { Id = fileId, FileName = Path.GetFileName(input.FileName), Kind = input.Kind, ProductId = input.ProductId, ItemId = input.ItemId, Size = bytes.Length };
         d.Attachments.Add(evidence);
         c.DataJson = Encode(d);
         await claims.UpdateAsync(c);
@@ -502,7 +538,7 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
         return new()
         {
             FileName = file.OriginalName,
-            ContentType = "application/octet-stream",
+            ContentType = Path.GetExtension(file.OriginalName).ToLowerInvariant() switch { ".png" => "image/png", ".jpg" or ".jpeg" => "image/jpeg", ".pdf" => "application/pdf", ".tif" or ".tiff" => "image/tiff", _ => "application/octet-stream" },
             Content = await blobs.GetAllBytesAsync(file.BlobName)
         };
     }

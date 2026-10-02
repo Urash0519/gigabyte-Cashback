@@ -38,7 +38,7 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
         await WithUnitOfWorkAsync(async () => { await action(); return true; });
     }
 
-    private async Task<CampaignDto> PublishedCampaignAsync(long budget = 10000, string exclusivityGroup = "")
+    private async Task<CampaignDto> PublishedCampaignAsync(long budget = 10000, string exclusivityGroup = "", int itemLimit = 1)
     {
         var today = DateTime.UtcNow.Date;
         var created = await WithUnitOfWorkAsync(() => _service.CreateCampaignAsync(new CampaignInput
@@ -46,8 +46,8 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
             Name = "Integration " + Guid.NewGuid(), BudgetMinor = budget, ExclusivityGroup = exclusivityGroup,
             PurchaseStart = today.AddDays(-30), PurchaseEnd = today.AddDays(1),
             ClaimStart = today.AddDays(-30), ClaimEnd = today.AddDays(30),
-            Terms = "Terms", Privacy = "Privacy", MaxClaimsPerPerson = 10,
-            Products = [new() { Id = "gpu", Category = "GPU", Model = "RTX", CashbackMinor = 1000 }, new() { Id = "board", Category = "Motherboard", Model = "B860", CashbackMinor = 2000 }],
+            Terms = "Terms", Privacy = "Privacy", MaxClaimsPerPerson = 10, MaxItemsPerCategory = itemLimit,
+            Products = [new() { Id = "gpu", Category = "GPU", Model = "RTX", CashbackMinor = 1000, QuantityLimit = itemLimit }, new() { Id = "board", Category = "Motherboard", Model = "B860", CashbackMinor = 2000 }],
             Retailers = [new() { Id = "shop", Name = "Shop", Country = "DE" }]
         }));
         return await WithUnitOfWorkAsync(() => _service.PublishCampaignAsync(created.Id, new() { Reason = "Ready" }));
@@ -185,7 +185,9 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
         var replacementSerial = Guid.NewGuid().ToString("N");
         supplement.Data.Items = [new() { ProductId = "board", SerialNumber = replacementSerial }];
         supplement.Data.ChangeReason = "Corrected product and serial against invoice";
-        await WithUnitOfWorkAsync(() => _service.SaveClaimAsync(draft.Id, supplement.Data));
+        var corrected = await WithUnitOfWorkAsync(() => _service.SaveClaimAsync(draft.Id, supplement.Data));
+        corrected.Data.Attachments.ShouldNotContain(x => x.Kind == "SerialNumber" && x.ProductId == "gpu");
+        corrected.History.ShouldContain(x => x.Action == "EvidenceRemoved");
         await WithUnitOfWorkAsync(() => _service.UploadEvidenceAsync(draft.Id, new()
         {
             FileName = "board-serial.jpg", Kind = "SerialNumber", ProductId = "board", Content = [255, 216, 255, 1, 2]
@@ -203,6 +205,39 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
             var revisions = await GetRequiredService<IRepository<ClaimRevision, Guid>>().GetListAsync(x => x.ClaimId == draft.Id);
             revisions.ShouldContain(x => x.AmountMinor == 1000 && x.DataJson.Contains(originalSerial));
         });
+    }
+
+    [Fact]
+    public async Task Review_checklist_should_record_each_check_and_allow_approval()
+    {
+        var campaign = await PublishedCampaignAsync();
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(draft.Id));
+        var checkedClaim = await WithUnitOfWorkAsync(() => _service.SaveReviewChecksAsync(draft.Id, new ReviewChecksInput
+        {
+            Passed = new[] { "membership", "invoice", "serial", "eligibility", "duplicates", "rma", "evidence" }
+                .ToDictionary(x => x, _ => "Reviewed and passed")
+        }));
+        checkedClaim.History.Count(x => x.Action.StartsWith("Check:")).ShouldBe(7);
+        (await WithUnitOfWorkAsync(() => _service.ClaimActionAsync(draft.Id, new() { Action = "approve", Reason = "All checks passed" })))
+            .ReviewStatus.ShouldBe("Approved");
+    }
+
+    [Fact]
+    public async Task Same_model_claim_lines_need_separate_serial_photos()
+    {
+        var campaign = await PublishedCampaignAsync(itemLimit: 2);
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        draft.Data.Items.Add(new() { ProductId = "gpu", SerialNumber = Guid.NewGuid().ToString("N") });
+        var saved = await WithUnitOfWorkAsync(() => _service.SaveClaimAsync(draft.Id, draft.Data));
+        saved.Data.Items.Select(x => x.ItemId).Distinct().Count().ShouldBe(2);
+        await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(draft.Id)));
+        await WithUnitOfWorkAsync(() => _service.UploadEvidenceAsync(draft.Id, new()
+        {
+            FileName = "second-serial.jpg", Kind = "SerialNumber", ProductId = "gpu",
+            ItemId = saved.Data.Items[1].ItemId, Content = [255, 216, 255, 1, 2]
+        }));
+        (await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(draft.Id))).ReviewStatus.ShouldBe("Submitted");
     }
 
     [Fact]

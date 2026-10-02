@@ -47,7 +47,10 @@ type Props = {
 };
 export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
   const { locale, t } = useLocale();
-  const [draft, setDraft] = useState<ClaimInput>(structuredClone(claim.data));
+  const [draft, setDraft] = useState<ClaimInput>(() => ({
+    ...structuredClone(claim.data),
+    items: claim.data.items.map((item) => ({ ...item, itemId: item.itemId || crypto.randomUUID() })),
+  }));
   const [current, setCurrent] = useState(claim);
   const [activeCampaign, setActiveCampaign] = useState(campaign);
   const [pendingVersion, setPendingVersion] = useState<ClaimVersionCheck>();
@@ -74,6 +77,30 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
   const data =
     activeCampaign.versions.find((v) => v.id === current.campaignVersionId)
       ?.data ?? activeCampaign.data;
+  const updateItems = (items: ClaimInput["items"]) => {
+    const next = items.map((item) => ({ ...item, itemId: item.itemId || crypto.randomUUID() }));
+    if (draft.attachments.some((a) => a.kind === "SerialNumber" && !next.some((item) => item.productId === a.productId && (a.itemId ? item.itemId === a.itemId : draft.items.filter((old) => old.productId === a.productId).length === 1))))
+      setMessage("Product evidence removed after changing products. Upload evidence for the selected product.");
+    setDraft((previous) => ({
+      ...previous,
+      items: next,
+      attachments: previous.attachments.filter((a) =>
+        a.kind === "Invoice" || next.some((item) =>
+          item.productId === a.productId &&
+          (a.itemId ? item.itemId === a.itemId :
+            previous.items.filter((old) => old.productId === a.productId).length === 1 &&
+            next.filter((current) => current.productId === a.productId).length === 1),
+        ),
+      ),
+    }));
+  };
+  const categoryCounts = draft.items.reduce<Record<string, number>>((counts, item) => {
+    const category = data.products.find((p) => p.id === item.productId)?.category;
+    if (category) counts[category] = (counts[category] ?? 0) + 1;
+    return counts;
+  }, {});
+  const overLimitCategories = Object.entries(categoryCounts).filter(([, count]) => count > data.maxItemsPerCategory);
+  const overLimitProducts = data.products.filter((product) => draft.items.filter((item) => item.productId === product.id).length > product.quantityLimit);
   useEffect(() => {
     let cancelled = false;
     if (claim.reviewStatus !== "Draft") return;
@@ -174,9 +201,9 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
         throw e;
       }
     });
-  const upload = async (file: File, kind: string, productId = "") => {
+  const upload = async (file: File, kind: string, productId = "", itemId = "") => {
     await save();
-    await api.upload(current.id, file, kind, productId);
+    await api.upload(current.id, file, kind, productId, itemId);
     const saved = (await api.claims()).find((c) => c.id === current.id);
     if (saved) {
       setCurrent(saved);
@@ -205,17 +232,18 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
       {t("Edit")}{" "}
     </button>
   );
-  const evidenceFiles = (kind: string, productId = "") =>
+  const evidenceFiles = (kind: string, productId = "", itemId = "") =>
     draft.attachments.filter(
-      (a) => a.kind === kind && (!productId || a.productId === productId),
+      (a) => a.kind === kind && (!productId || (a.productId === productId && (a.itemId ? a.itemId === itemId : draft.items.filter((i) => i.productId === productId).length === 1))),
     );
   const uploadCard = (
     label: string,
     kind: string,
     productId = "",
+    itemId = "",
     disabled = false,
   ) => {
-    const files = evidenceFiles(kind, productId);
+    const files = evidenceFiles(kind, productId, itemId);
     return (
       <div className={`claim-upload-card ${files.length ? "has-files" : ""}`}>
         <span className="claim-upload-symbol" aria-hidden="true">
@@ -234,7 +262,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
             disabled={busy || disabled}
             onChange={(e) => {
               const file = e.target.files?.[0];
-              if (file) void execute(() => upload(file, kind, productId));
+              if (file) void execute(() => upload(file, kind, productId, itemId));
               e.target.value = "";
             }}
           />
@@ -398,6 +426,9 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
               onSubmit={(e) => {
                 e.preventDefault();
                 void execute(async () => {
+                  if ((step === 2 || step === 4) && (overLimitCategories.length || overLimitProducts.length)) {
+                    throw new Error(t(overLimitCategories.length ? "Category quantity limit exceeded." : "Product quantity limit exceeded."));
+                  }
                   if (step === 4 && !(await checkLatest())) return;
                   await save();
                   setCompleted((previous) => [...new Set([...previous, step])]);
@@ -640,9 +671,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                             label={t("Series")}
                             value={product?.series ?? ""}
                             onChange={(e) =>
-                              setDraft({
-                                ...draft,
-                                items: draft.items.map((v, n) =>
+                              updateItems(draft.items.map((v, n) =>
                                   n === i
                                     ? {
                                         ...v,
@@ -652,8 +681,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                                           )?.id ?? "",
                                       }
                                     : v,
-                                ),
-                              })
+                                ))
                             }
                           >
                             <option value="">{t("Select series")}</option>
@@ -668,14 +696,11 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                             required
                             value={item.productId}
                             onChange={(e) =>
-                              setDraft({
-                                ...draft,
-                                items: draft.items.map((v, n) =>
+                              updateItems(draft.items.map((v, n) =>
                                   n === i
                                     ? { ...v, productId: e.target.value }
                                     : v,
-                                ),
-                              })
+                                ))
                             }
                           >
                             <option value="">{t("Select product")}</option>
@@ -773,12 +798,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                         <button
                           type="button"
                           className="button button-danger"
-                          onClick={() =>
-                            setDraft({
-                              ...draft,
-                              items: draft.items.filter((_, n) => n !== i),
-                            })
-                          }
+                          onClick={() => updateItems(draft.items.filter((_, n) => n !== i))}
                         >
                           {" "}
                           {t("Remove product")}{" "}
@@ -786,22 +806,28 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                       </div>
                     );
                   })}
+                  {overLimitCategories.length > 0 && (
+                    <p role="alert" className="message error">
+                      {t("Category quantity limit exceeded.")} {overLimitCategories.map(([name]) => name).join(", ")} ({t("maximum")} {data.maxItemsPerCategory})
+                    </p>
+                  )}
+                  {overLimitProducts.length > 0 && (
+                    <p role="alert" className="message error">{t("Product quantity limit exceeded.")} {overLimitProducts.map((product) => product.model).join(", ")}</p>
+                  )}
                   <button
                     type="button"
                     className="button button-light"
                     onClick={() =>
-                      setDraft({
-                        ...draft,
-                        items: [
+                      updateItems([
                           ...draft.items,
                           {
+                            itemId: crypto.randomUUID(),
                             productId: "",
                             serialNumber: "",
                             checkNumber: "",
                             amountMinor: 0,
                           },
-                        ],
-                      })
+                        ])
                     }
                   >
                     {" "}
@@ -832,6 +858,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
                           }),
                           "SerialNumber",
                           item.productId,
+                          item.itemId ?? "",
                           !item.productId,
                         )}
                       </div>

@@ -16,7 +16,7 @@ spec:
           maxRetries: 0
           timeoutSeconds: '600'
           containers:
-            - image: asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/migrator:uat-20260910-q1-p0
+            - image: asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/migrator:uat-20261002-review-ux
               resources:
                 limits: {cpu: '1', memory: 1Gi}
               env:

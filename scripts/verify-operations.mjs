@@ -23,7 +23,12 @@ const data={campaignId:campaign.id,market:'DE',email:'yoyo.chen@gigabyte.com',co
 let claim=await request('/api/operations/claims',data);assert.ok(claim.data.bank.iban.includes('*'));assert.ok(!JSON.stringify(claim).includes(data.bank.iban));check('bank values are masked in claim response');
 const ownedCampaign=await request(`/api/operations/claims/${claim.id}/campaign`);assert.equal(ownedCampaign.id,campaign.id);assert.equal(ownedCampaign.publishedVersion,1);assert.equal((await fetch(base+`/api/operations/claims/${claim.id}/campaign`)).status,401);check('hidden campaign snapshot remains available only through authenticated claim access');
 const content=Buffer.from('%PDF-1.4\nSynthetic test evidence\n%%EOF').toString('base64');
-for(const [kind,productId]of[['Invoice',''],['SerialNumber','BOARD'],['SerialNumber','DISPLAY']])await request(`/api/operations/claims/${claim.id}/evidence`,{fileName:`${kind}-${productId||'all'}.pdf`,kind,productId,content});
+const uploaded=[];for(const [kind,productId]of[['Invoice',''],['SerialNumber','BOARD'],['SerialNumber','DISPLAY']])uploaded.push(await request(`/api/operations/claims/${claim.id}/evidence`,{fileName:`${kind}-${productId||'all'}.pdf`,kind,productId,content}));
+const evidencePath=`/api/operations/claims/${claim.id}/evidence/${uploaded[1].id}`;
+const preview=await fetch(base+evidencePath,{headers:{Cookie:[...jar].map(([k,v])=>`${k}=${v}`).join('; ')}});
+assert.equal(preview.status,200);assert.equal(preview.headers.get('content-type'),'application/pdf');assert.match(preview.headers.get('content-disposition')??'',/inline/);await preview.arrayBuffer();
+const download=await fetch(base+evidencePath+'?download=true',{headers:{Cookie:[...jar].map(([k,v])=>`${k}=${v}`).join('; ')}});
+assert.equal(download.status,200);assert.match(download.headers.get('content-disposition')??'',/attachment/);await download.arrayBuffer();check('evidence opens inline with separate download');
 claim=await request(`/api/operations/claims/${claim.id}/submit`,{});assert.equal(claim.amountMinor,7000);assert.equal(claim.reviewStatus,'Submitted');check('multi-product cross-border claim and server-calculated reward');
 await request(`/api/operations/claims/${claim.id}/submit`,{},403);check('duplicate submission rejected');
 await request('/api/dev-auth/login',{area:'admin'});
@@ -31,7 +36,8 @@ let campaigns=await request('/api/operations/campaigns?admin=true');assert.equal
 await request(`/api/operations/claims/${claim.id}/action`,{action:'hold',reason:'Test risk hold'});
 await request(`/api/operations/claims/${claim.id}/action`,{action:'approve',reason:'Must be blocked'},403);check('risk hold blocks approval');
 await request(`/api/operations/claims/${claim.id}/action`,{action:'release-hold',reason:'Test issue resolved'});
-for(const value of ['membership','invoice','serial','eligibility','duplicates','rma','evidence'])await request(`/api/operations/claims/${claim.id}/action`,{action:'check',reason:'Synthetic evidence verified',value});
+claim=await request(`/api/operations/claims/${claim.id}/review-checks`,{passed:Object.fromEntries(['membership','invoice','serial','eligibility','duplicates','rma','evidence'].map(value=>[value,'Synthetic evidence verified']))});
+assert.equal(claim.history.filter(event=>event.action.startsWith('Check:')).length,7);
 claim=await request(`/api/operations/claims/${claim.id}/action`,{action:'approve',reason:'All checks passed'});assert.equal(claim.reviewStatus,'Approved');
 let payment=(await request('/api/operations/payments',{claimIds:[claim.id],reason:'Test authorization'}))[0];check('review checks and payment authorization');
 const csv=await request(`/api/operations/payments/${payment.id}/export`);assert.ok(csv.includes(payment.id));assert.ok(csv.includes('DE00000000000000000000'));check('controlled bank CSV export');
@@ -55,9 +61,11 @@ await request(`/api/operations/claims/${second.id}/action`,{action:'supplement',
 await request('/api/dev-auth/logout',{});await request('/api/dev-auth/session');await request('/api/dev-auth/login',{area:'public'});await request('/api/dev-auth/session');
 second=(await request('/api/operations/claims')).find(c=>c.id===second.id);
 second=await request(`/api/operations/claims/${second.id}/save`,{...second.data,items:second.data.items.slice(0,1),changeReason:'Remove ineligible display'});
+assert.ok(!second.data.attachments.some(attachment=>attachment.productId==='DISPLAY'));
+assert.ok(second.history.some(event=>event.action==='EvidenceRemoved'));
 assert.ok(second.revisions.length>0);second=await request(`/api/operations/claims/${second.id}/submit`,{});assert.equal(second.amountMinor,5000);check('supplement keeps revision and recalculates budget');
 await request('/api/dev-auth/login',{area:'admin'});await request('/api/dev-auth/session');
-for(const value of ['membership','invoice','serial','eligibility','duplicates','rma','evidence'])await request(`/api/operations/claims/${second.id}/action`,{action:'check',reason:'Corrected evidence verified',value});
+await request(`/api/operations/claims/${second.id}/review-checks`,{passed:Object.fromEntries(['membership','invoice','serial','eligibility','duplicates','rma','evidence'].map(value=>[value,'Corrected evidence verified']))});
 await request(`/api/operations/claims/${second.id}/action`,{action:'approve',reason:'Corrected application approved'});
 const batchPayment=(await request('/api/operations/payments',{claimIds:[second.id],reason:'Second batch test'}))[0];
 const zip=await request(`/api/operations/payments/batches/${batchPayment.batchId}/export`);assert.ok(zip.startsWith('PK'));check('batch export includes ZIP manifest');

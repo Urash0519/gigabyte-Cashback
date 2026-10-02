@@ -13,3 +13,4 @@
 **/*.log
 site
 docs
+graphify-out

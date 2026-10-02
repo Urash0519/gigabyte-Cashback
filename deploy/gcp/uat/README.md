@@ -10,7 +10,7 @@ Deployed and verified **2026-09-10**. Project `side-project-platform`, account `
 | Artifact Registry | `cashback-uat` | Regional Docker images: API, migrator and combined public/admin gateway. |
 | Cloud Build | On-demand builds | `cloudbuild.yaml`; source archive uses existing `side-project-platform_cloudbuild` bucket. |
 | IAM | `cashback-uat@side-project-platform.iam.gserviceaccount.com` | Dedicated runtime. Cloud SQL Client, bucket-scoped Object Admin and access to only runtime secrets. |
-| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00005-j57`, 100% traffic. |
+| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00006-crp`, 100% traffic. |
 | Cloud Run Job | `cashback-uat-migrator` | 1 task, 1 vCPU / 1GiB, 0 retries; successful P0 execution `cashback-uat-migrator-7bgwh`. |
 | Cloud Storage | `side-project-platform-cashback-uat-evidence` | Private ABP claim evidence; same region. Runtime Object Admin + Legacy Bucket Reader (ABP requires `storage.buckets.get` before uploading). |
 | Cloud Storage | `side-project-platform-cashback-uat-keys` | Private persistent ASP.NET Core Data Protection keys across instance restarts; runtime Object Admin. Persisted XML key verified. |
@@ -70,6 +70,20 @@ Q1 version 2 only shortens the simulated summary; original conditions remain in 
 Rollback: route traffic to a previously verified revision while investigating; the additive catalog table can remain. Do not drop the new table or run a down migration on the shared database as part of a UI rollback. Do not change bank-encryption secrets. Preserve the existing open-UAT access decision.
 
 ## Build and release
+
+### 2026-10-02 claim and review usability release
+
+Commit `9184c2c` is on `origin/main`. Build `941f68e8-9881-45e5-8b4f-32b19820a6e6` succeeded with tag `uat-20261002-review-ux`. Migration execution `cashback-uat-migrator-7n86c` succeeded; this release changes JSON claim data but adds no database schema migration. Cloud Run revision `cashback-uat-00006-crp` serves 100% of traffic.
+
+| Image | Digest |
+|---|---|
+| API | `sha256:0a9ea22394477e94af34663dc5a897bd0e8d74a629b26ea49a680617598b52d7` |
+| Migrator | `sha256:aa36e33ea5768604277d134df722063315d84971a96d28f59f34ed8835e9e933` |
+| Gateway | `sha256:f13f248aaf65deedb891b012726a8234397bc5b15c70b23997dbf80c5c5667e0` |
+
+Changes: product-line evidence association and orphan removal, early category/product quantity feedback, inline evidence preview with a separate download action, batch recording of seven review checks, and submission-round history sections. Existing claim JSON remains readable; legacy evidence is associated with a unique matching product line when a draft is saved. Local verification passed 44 .NET tests, both frontend typechecks/builds, Docker health, and 25 HTTP business checks. Cloud verification passed six anonymous/access checks, 25 business checks, and 12 configuration/authorization checks.
+
+Rollback: route traffic to revision `cashback-uat-00005-j57` if required. No database down migration is needed. Claims saved in the new format retain item IDs in their JSON.
 
 ```powershell
 # For the next release, choose a NEW unique tag and update both manifests.

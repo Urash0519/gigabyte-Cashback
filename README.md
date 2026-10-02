@@ -20,7 +20,7 @@ Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。
 
 專案 `side-project-platform`，部署帳號 `yoyo.chen@gigabyte.com`，區域 `asia-east1`。目標為 3 人約 30 分鐘測試：Cloud Run 閒置縮到 0、最多 1 實例；Cloud SQL PostgreSQL 17 `db-f1-micro`／10GB SSD／單區；附件與 Cookie 金鑰使用私有 Cloud Storage，密碼使用 Secret Manager。
 
-2026-09-10 已部署並驗證：Cloud Run `cashback-uat`、migration Job `cashback-uat-migrator`、Cloud SQL `cashback-uat-db`、Artifact Registry `cashback-uat`、兩個私有 Storage bucket、四個 Secret Manager 秘密及專用執行身份。使用 Cloud Build 建置與既有 Cloud Logging／Monitoring；沒有新增負載平衡器、NAT、Redis 或 GKE。現有原型與其他專案服務不變。完整資源與映像清單見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
+2026-10-02 已更新並驗證 UAT 案件與審核體驗：Cloud Run `cashback-uat-00006-crp` 承接 100% 流量。既有 Cloud SQL、Artifact Registry、私有 Storage bucket、Secret Manager 與執行身份維持沿用；完整資源、映像及測試紀錄見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
 
 - [UAT 前台](https://cashback-uat-219894818230.asia-east1.run.app/)／[UAT 後台](https://cashback-uat-219894818230.asia-east1.run.app/admin/)
 - 依使用者最新決策，UAT 移除入口密碼，任何人可直接開啟前後台，再按「開發環境登入」使用模擬身份 `yoyo.chen@gigabyte.com`。不需要 Google 帳號或 UAT 密碼。

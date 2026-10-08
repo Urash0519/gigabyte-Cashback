@@ -10,7 +10,7 @@ Deployed and verified **2026-09-10**. Project `side-project-platform`, account `
 | Artifact Registry | `cashback-uat` | Regional Docker images: API, migrator and combined public/admin gateway. |
 | Cloud Build | On-demand builds | `cloudbuild.yaml`; source archive uses existing `side-project-platform_cloudbuild` bucket. |
 | IAM | `cashback-uat@side-project-platform.iam.gserviceaccount.com` | Dedicated runtime. Cloud SQL Client, bucket-scoped Object Admin and access to only runtime secrets. |
-| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00010-zls`, 100% traffic. |
+| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00013-l54`, 100% traffic. |
 | Cloud Run Job | `cashback-uat-migrator` | 1 task, 1 vCPU / 1GiB, 0 retries; successful P0 execution `cashback-uat-migrator-7bgwh`. |
 | Cloud Storage | `side-project-platform-cashback-uat-evidence` | Private ABP claim evidence; same region. Runtime Object Admin + Legacy Bucket Reader (ABP requires `storage.buckets.get` before uploading). |
 | Cloud Storage | `side-project-platform-cashback-uat-keys` | Private persistent ASP.NET Core Data Protection keys across instance restarts; runtime Object Admin. Persisted XML key verified. |
@@ -70,6 +70,12 @@ Q1 version 2 only shortens the simulated summary; original conditions remain in 
 Rollback: route traffic to a previously verified revision while investigating; the additive catalog table can remain. Do not drop the new table or run a down migration on the shared database as part of a UI rollback. Do not change bank-encryption secrets. Preserve the existing open-UAT access decision.
 
 ## Build and release
+
+### Reference full workflow follow-up — 2026-10-08
+
+Cloud Build `6d226f4b-d872-4f7f-a34e-d1dafa272854` succeeded. Gateway tag `uat-20261008-reference-e2e`, digest `sha256:910621bd1c4eced099e85992ef223093aab1c6559ad9c88fc01a11f47c236077`. Revision `cashback-uat-00013-l54` became Ready at 17:39 Asia/Taipei and serves 100% traffic. API, database, secrets and access configuration are unchanged. Previous fully verified navigation release `cashback-uat-00010-zls` is the rollback target; intermediate revisions 00011/00012 contain only part of this follow-up.
+
+Fixed reference admin published-activity links, existing-claim login resumption and success-message positioning while keeping the original UI defaults. A dedicated synthetic promotion/claim passed actual reference UI creation, publishing, two-product EUR 70 submission, three evidence uploads, supplement/resubmission, seven review checks, approval, manual Authorized → Submitted → Succeeded recording, public lookup and dashboard/summary reconciliation. Final budget is reserved 0 / approved unpaid 0 / paid 70 / available 930 EUR. No bank transfer occurred. Both frontend builds, deployed access checks and final state assertions passed; payment/tracker layouts were inspected at 1440/768/375px. Cloud request logs confirm all three evidence uploads returned 200 in 0.315–1.055s despite automation file-chooser delays. Real identity/bank/email integrations and Safari remain outside the verified result. See [end-to-end report](../../../docs/User-Reference-End-to-End.md).
 
 ### Reference navigation follow-up — 2026-10-08
 

@@ -68,8 +68,9 @@ type Props = {
   run: (action: () => Promise<unknown>, message: string) => Promise<void>;
   reload: () => Promise<void>;
   busy: boolean;
+  publicCampaignUrl?: (campaign: Campaign) => string;
 };
-export function Campaigns({ campaigns, run, reload, busy }: Props) {
+export function Campaigns({ campaigns, run, reload, busy, publicCampaignUrl = () => urls.public }: Props) {
   const { t } = useLocale();
   const [editing, setEditing] = useState<Campaign | "new" | null>(null);
   const [draft, setDraft] = useState<CampaignInput>(blankCampaign);
@@ -384,7 +385,7 @@ export function Campaigns({ campaigns, run, reload, busy }: Props) {
                 {[...preflight.result.errors.map(issue => ({ ...issue, severity: "Error" })), ...preflight.result.warnings.map(issue => ({ ...issue, severity: "Warning" }))].map((issue, i) => <p key={i}><b>{t(issue.severity)}</b> · <code>{issue.path}</code> — {issue.message}</p>)}
                 <button type="button" className="button button-light" onClick={() => downloadText("draft-preflight.csv", csvText(["severity", "path", "message"], [...preflight.result.errors.map(i => ({ ...i, severity: "error" })), ...preflight.result.warnings.map(i => ({ ...i, severity: "warning" }))]), "text/csv;charset=utf-8")}>{t("Download validation report")}</button>
               </>}
-              {editing !== "new" && editing.publishedVersion > 0 && <p><a href={urls.public} target="_blank" rel="noreferrer">{t("Open public site (published content only; unsaved draft is not shown)")}</a></p>}
+              {editing !== "new" && editing.publishedVersion > 0 && <p><a href={publicCampaignUrl(editing)} target="_blank" rel="noreferrer">{t("Open public site (published content only; unsaved draft is not shown)")}</a></p>}
             </section>}
             <div className="actions" style={{ marginTop: 24 }}>
               <button disabled={busy} className="button button-primary">

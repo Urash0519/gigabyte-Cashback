@@ -44,8 +44,9 @@ type Props = {
   campaign: Campaign;
   onSaved: (claim: Claim) => void;
   onBack: () => void;
+  successScroll?: "page" | "content";
 };
-export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
+export function ClaimForm({ claim, campaign, onSaved, onBack, successScroll = "page" }: Props) {
   const { locale, t } = useLocale();
   const [draft, setDraft] = useState<ClaimInput>(() => ({
     ...structuredClone(claim.data),
@@ -70,10 +71,11 @@ export function ClaimForm({ claim, campaign, onSaved, onBack }: Props) {
   const successHeading = useRef<HTMLHeadingElement>(null);
   useEffect(() => {
     if (submittedClaim) {
-      window.scrollTo({ top: 0, behavior: "instant" });
+      if (successScroll === "page") window.scrollTo({ top: 0, behavior: "instant" });
       successHeading.current?.focus({ preventScroll: true });
+      if (successScroll === "content") successHeading.current?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
     }
-  }, [submittedClaim]);
+  }, [submittedClaim, successScroll]);
   const data =
     activeCampaign.versions.find((v) => v.id === current.campaignVersionId)
       ?.data ?? activeCampaign.data;

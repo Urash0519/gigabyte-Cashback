@@ -19,6 +19,10 @@ const navigation: [Page, string, string][] = [
 const countryName = (value: string) => marketNames[value] ?? value;
 const publicBase = new URL(urls.public.endsWith("/") ? urls.public : urls.public + "/", window.location.origin);
 const referencePublic = new URL("reference/", publicBase).href;
+const referenceCampaignUrl = (campaign: Campaign) => {
+  const params = new URLSearchParams({ campaign: campaign.id, market: campaign.data.markets.includes("DE") ? "DE" : campaign.data.markets[0] ?? "DE" });
+  return `${referencePublic}#/promotion?${params}`;
+};
 
 export function ReferenceAdminApp() {
   const { locale, setLocale, t } = useLocale();
@@ -165,7 +169,7 @@ export function ReferenceAdminApp() {
           {page === "detailed" && campaign ? <ReferenceDetailed key={campaign.id} campaign={campaign} claims={scopedClaims} {...operationProps} /> : null}
           {page === "payments" && campaign ? <Payments key={campaign.id} payments={scopedPayments} claims={scopedClaims} {...operationProps} /> : null}
           {page === "fraud" && campaign ? <><section className="ra-report-card"><h2>Fraud Claims · Risk holds</h2><p>Our review workflow flags cases on hold. A risk hold is not a confirmed fraud decision. Fraud savings and fraud country analytics are not available.</p></section><Claims key={campaign.id} claims={scopedClaims.filter(value => value.onHold)} campaigns={[campaign]} {...operationProps} /></> : null}
-          {page === "campaigns" ? <Campaigns campaigns={campaigns} {...operationProps} /> : null}
+          {page === "campaigns" ? <Campaigns campaigns={campaigns} publicCampaignUrl={referenceCampaignUrl} {...operationProps} /> : null}
           {page === "notifications" ? <><p className="ra-scope-note">Notification delivery across all promotions.</p><Notifications /></> : null}
           {page === "pivot" ? <section className="ra-report-card"><h2>Pivot Reports</h2><p>Product / Store · Country / Product · Store / Country · Marketing Data</p><div className="ra-unavailable">Cross-dimension pivot reports are not available in the current reporting API.</div><button className="ra-primary" onClick={() => go("summaries")}>View available summary reports</button></section> : null}
           {page === "service" ? <section className="ra-report-card"><h2>Customer Service Overview</h2><div className="ra-unavailable">Customer queries, enquiry categories and a query tracker have not been implemented.</div><p>Claim review and supplemental information requests are available under Detailed. Notification delivery is available under Notifications.</p><button className="ra-primary" onClick={() => go("detailed")}>View claim operations</button></section> : null}

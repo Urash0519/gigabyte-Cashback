@@ -71,9 +71,15 @@ Rollback: route traffic to a previously verified revision while investigating; t
 
 ## Build and release
 
+### Reference UI/UX follow-up — 2026-10-08
+
+Final Cloud Build `eb85164a-219e-486b-b1fe-8cb8181b7ad1` succeeded. Gateway tag `uat-20261008-reference-ux-final`, digest `sha256:aac12539ead7a3d43932ed94399ceb074a83cf5aa2a6cdff3a11ed4b453fbc87`. Revision `cashback-uat-00009-s96` became ready at 15:55 Asia/Taipei and receives 100% traffic. The API image and database configuration are unchanged. The original reference UI release `cashback-uat-00007-5jw` remains the pre-change rollback revision.
+
+Changes are limited to the reference presentation: mobile/tablet reflow, readable colors and labels, scoped operational table scrolling, keyboard navigation, report error/retry states, and unsaved draft protection including product button edits. See [UI/UX findings, files and verification](../../../docs/User-Reference-UX-Audit.md). Local and Cloud Build production builds passed. Original CSS hashes remain unchanged. Live public and admin reference pages were checked at 1440/768/375px; the anonymous entry verification script passed all eight routes and preserved the admin-session requirement.
+
 ### 2026-10-08 user reference UI release
 
-Cloud Build `25e8a18e-cddb-4137-a347-e441d7f80a85` succeeded. Gateway tag `uat-20261008-reference-ui`, digest `sha256:3cbda3086656cf59d97dcb53fae91f29a7430882811f08a142a037c73aaa66b7`. Cloud Run revision `cashback-uat-00007-5jw` became ready at 14:37 Asia/Taipei and receives 100% traffic. API remains on the verified `uat-20261002-review-ux` image (`sha256:0a9ea22394477e94af34663dc5a897bd0e8d74a629b26ea49a680617598b52d7`); no migration, secret, access policy or database configuration change was required.
+Cloud Build `25e8a18e-cddb-4137-a347-e441d7f80a85` succeeded. Gateway tag `uat-20261008-reference-ui`, digest `sha256:3cbda3086656cf59d97dcb53fae91f29a7430882811f08a142a037c73aaa66b7`. Cloud Run revision `cashback-uat-00007-5jw` became ready at 14:37 Asia/Taipei and received 100% traffic at that release. API remains on the verified `uat-20261002-review-ux` image (`sha256:0a9ea22394477e94af34663dc5a897bd0e8d74a629b26ea49a680617598b52d7`); no migration, secret, access policy or database configuration change was required.
 
 New independent routes: `/reference/` (26Q1 public design), `/admin/reference/` (Benamic report design), and `/compare/` (four version links). Original `/` and `/admin/` applications and styles are retained. The public reference entry selects the existing Q1 simulation and stores the chosen campaign/market in its hash. Both presentations use the same business APIs and records. See [scope and limitations](../../../docs/User-Reference-UI.md) and [backend feature comparison](../../../docs/Benamic-Backend-Gap-Analysis.md).
 

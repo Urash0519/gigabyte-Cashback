@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { api, urls, marketNames, type Campaign, type Claim, type Payment, type Session, type Event } from "@gigabyte-cashback/api-client";
 import { date, money } from "@gigabyte-cashback/ui";
 import { Campaigns } from "./Campaigns";
@@ -37,6 +37,9 @@ export function ReferenceAdminApp() {
   const [mobileNav, setMobileNav] = useState(false);
   const [search, setSearch] = useState("");
   const [refreshVersion, setRefreshVersion] = useState(0);
+  const [summaryDimension, setSummaryDimension] = useState("purchaseCountry");
+  const referenceRoot = useRef<HTMLDivElement>(null);
+  const menuButton = useRef<HTMLButtonElement>(null);
   const reload = useCallback(async () => {
     const [nextCampaigns, nextClaims, nextPayments, nextEvents] = await Promise.all([api.campaigns(true), api.claims(true), api.payments(), api.audit()]);
     setCampaigns(nextCampaigns); setClaims(nextClaims); setPayments(nextPayments); setEvents(nextEvents);
@@ -63,17 +66,47 @@ export function ReferenceAdminApp() {
     window.addEventListener("focus", refresh);
     return () => { live = false; window.removeEventListener("focus", refresh); };
   }, []);
+  useEffect(() => {
+    if (!mobileNav) return;
+    const close = (event: KeyboardEvent) => {
+      if (event.key === "Escape") { setMobileNav(false); menuButton.current?.focus(); }
+    };
+    window.addEventListener("keydown", close);
+    return () => window.removeEventListener("keydown", close);
+  }, [mobileNav]);
+  useEffect(() => {
+    const title = page === "promotions" ? "Promotions" : navigation.find(([key]) => key === page)?.[2] ?? page;
+    document.title = `${title} · GIGABYTE Promotion Portal`;
+  }, [page]);
   const logged = Boolean(session?.isAuthenticated && session.area === "admin");
   const campaign = campaigns.find(value => value.id === campaignId);
   const scopedClaims = claims.filter(value => value.data.campaignId === campaignId);
   const claimIds = new Set(scopedClaims.map(value => value.id));
   const scopedPayments = payments.filter(value => claimIds.has(value.claimId));
-  const go = (nextPage: Page) => { setPage(nextPage); setMobileNav(false); setMessage(""); };
+  const go = (nextPage: Page) => { setPage(nextPage); setMobileNav(false); setMessage(""); requestAnimationFrame(() => document.getElementById("ra-main-content")?.focus()); };
   const openCampaign = (value: Campaign) => { setCampaignId(value.id); go("dashboard"); };
   const visibleCampaigns = campaigns.filter(value => value.data.status === group && value.data.name.toLowerCase().includes(search.toLowerCase()));
   const operationProps = { run, reload, busy };
+  useEffect(() => {
+    const root = referenceRoot.current;
+    if (!root) return;
+    // Enhance reused operational tables only inside this reference page.
+    const enhanceTables = () => {
+      for (const region of root.querySelectorAll<HTMLElement>(".table-wrap")) {
+        if (!region.hasAttribute("tabindex")) region.tabIndex = 0;
+        if (!region.hasAttribute("role")) region.setAttribute("role", "region");
+        if (!region.hasAttribute("aria-label")) region.setAttribute("aria-label", `${region.closest("section")?.querySelector("h2")?.textContent ?? "Operations"} table`);
+        for (const heading of region.querySelectorAll("thead th")) if (!heading.hasAttribute("scope")) heading.setAttribute("scope", "col");
+      }
+    };
+    enhanceTables();
+    const observer = new MutationObserver(enhanceTables);
+    observer.observe(root, { childList: true, subtree: true });
+    return () => observer.disconnect();
+  }, []);
 
-  return <div className="reference-admin">
+  return <div ref={referenceRoot} className="reference-admin">
+    <a className="ra-skip-link" href="#ra-main-content">Skip to content</a>
     <div className="ra-evaluation">{t("Internal evaluation · sample data only · bank API and Google sign-in are not connected")}</div>
     <header className="ra-header">
       <a className="ra-brand" href={urls.admin}>GIGABYTE <small>Promotion portal</small></a>
@@ -82,44 +115,46 @@ export function ReferenceAdminApp() {
         <a href={referencePublic}>Consumer reference ↗</a>
         <label className="ra-language"><span className="ra-sr">Interface language</span><select aria-label="Interface language" value={locale} onChange={event => setLocale(event.target.value === "zh-TW" ? "zh-TW" : "en")}><option value="en">English</option><option value="zh-TW">繁體中文</option></select></label>
         {logged ? <button disabled={busy} onClick={() => void run(async () => { await api.logout(); setSession(await api.session()); }, "Signed out.")}>{t("Sign out")}</button> : null}
-        {logged && page !== "promotions" ? <button className="ra-menu" aria-label="Toggle navigation" aria-expanded={mobileNav} onClick={() => setMobileNav(value => !value)}>☰</button> : null}
+        {logged && page !== "promotions" ? <button ref={menuButton} className="ra-menu" aria-label={mobileNav ? "Close navigation" : "Open navigation"} aria-controls="ra-navigation" aria-expanded={mobileNav} onClick={() => setMobileNav(value => !value)}>☰</button> : null}
       </nav>
     </header>
+    {loading || busy ? <p className="ra-loading-status" role="status">{t(loading ? "Loading…" : "Saving / loading…")}</p> : null}
     {!logged ? <>
       <section className="ra-hero ra-welcome"><h1>Promotion reports</h1><span className="ra-pill">GIGABYTE</span></section>
-      <main className="ra-login">
+      <main id="ra-main-content" tabIndex={-1} className="ra-login" aria-busy={loading || busy}>
         {error ? <p className="message error" role="alert">{t(error)}</p> : null}
         <h2>{t("Promotion operations")}</h2><p>{t("Manage campaigns, review claims and reconcile payments.")}</p>
-        <button className="ra-primary" disabled={busy || loading} onClick={() => void run(async () => { setSession(await api.login("admin")); await reload(); }, "Signed in with the development identity.")}>{loading ? t("Loading…") : busy ? t("Signing in…") : t("Sign in for development")}</button>
+        <button className="ra-primary" disabled={busy || loading} onClick={() => void run(async () => { setSession(await api.login("admin")); await reload(); }, "Signed in with the development identity.")}>{t("Sign in for development")}{loading ? " · Checking session…" : busy ? ` · ${t("Signing in…")}` : ""}</button>
         <small>{t("Google sign-in will replace this development button.")}</small>
       </main>
     </> : page === "promotions" ? <>
       <section className="ra-hero ra-welcome"><h1>Welcome {session?.email?.split("@")[0]}!</h1><span className="ra-pill">GIGABYTE</span></section>
-      <main className="ra-promotions">
+      <main id="ra-main-content" tabIndex={-1} className="ra-promotions" aria-busy={loading || busy}>
         {error ? <p className="message error" role="alert">{t(error)}</p> : null}
         {message ? <p className="message" role="status">{message}</p> : null}
-        <div className="ra-list-heading"><b>Click any campaign on the list below to view the reports</b><div className="ra-list-actions"><label className="ra-search"><span className="ra-sr">Search promotions</span><input aria-label="Search promotions" placeholder="Search promotions" value={search} onChange={event => setSearch(event.target.value)} /></label><button className="ra-primary" disabled={busy} onClick={() => void run(reload, "Overview refreshed.")}>{t("Refresh")}</button><button className="ra-primary" onClick={() => go("campaigns")}>{t("Manage campaigns")}</button></div></div>
+        <div className="ra-list-heading"><b>Click any campaign on the list below to view the reports</b><div className="ra-list-actions"><label className="ra-search"><span className="ra-sr">Search promotions</span><input type="search" autoComplete="off" aria-label="Search promotions" placeholder="Search promotions…" value={search} onChange={event => setSearch(event.target.value)} /></label><button className="ra-primary" disabled={busy || loading} onClick={() => void run(reload, "Overview refreshed.")}>{t("Refresh")}</button><button className="ra-primary" onClick={() => go("campaigns")}>{t("Manage campaigns")}</button></div></div>
         <div className="ra-promotion-tabs" aria-label="Promotion status">{(["Active", "Confirmed", "Archived", "Draft", "Paused"] as const).map(value => <button key={value} className={group === value ? "selected" : ""} aria-pressed={group === value} onClick={() => setGroup(value)}>{value} Promotions</button>)}</div>
         <p className="ra-scope-note">Each tab matches the campaign's saved status. Draft and paused campaigns remain available for operations.</p>
-        <span className="ra-cashback-count">CASHBACK ({visibleCampaigns.length})</span>
-        <div className="ra-promotion-table table-wrap"><table><thead><tr><th>Promotion Name</th><th>Promotion Type</th><th>Promotion Period</th><th>Promotion Countries</th><th>Status</th></tr></thead><tbody>{visibleCampaigns.map(value => <tr key={value.id}><td><button className="ra-campaign-link" onClick={() => openCampaign(value)}>{value.data.name}</button></td><td><span className="ra-type-tag">{value.data.type.toUpperCase()}</span></td><td>{date(value.data.purchaseStart).split(",")[0]} – {date(value.data.purchaseEnd).split(",")[0]}</td><td>{(value.data.markets.length ? value.data.markets : [value.data.market]).map(countryName).join(", ")}</td><td>{t(value.data.status)}</td></tr>)}</tbody></table></div>
-        {!visibleCampaigns.length ? <p className="ra-empty">No promotions match this view.</p> : null}
+        <span className="ra-cashback-count" role="status">CASHBACK ({loading ? "…" : visibleCampaigns.length})</span>
+        <p className="ra-scroll-hint">Scroll the table horizontally to view all columns. Keyboard: focus the table, then use the arrow keys.</p>
+        <div className="ra-promotion-table table-wrap" tabIndex={0} role="region" aria-label="Promotions table"><table><caption className="ra-sr">{group} promotions</caption><thead><tr><th scope="col">Promotion Name</th><th scope="col">Promotion Type</th><th scope="col">Promotion Period</th><th scope="col">Promotion Countries</th><th scope="col">Status</th></tr></thead><tbody>{visibleCampaigns.map(value => <tr key={value.id}><td><button className="ra-campaign-link" onClick={() => openCampaign(value)}>{value.data.name}</button></td><td><span className="ra-type-tag">{value.data.type.toUpperCase()}</span></td><td>{date(value.data.purchaseStart).split(",")[0]} – {date(value.data.purchaseEnd).split(",")[0]}</td><td>{(value.data.markets.length ? value.data.markets : [value.data.market]).map(countryName).join(", ")}</td><td>{t(value.data.status)}</td></tr>)}</tbody></table></div>
+        {!loading && !busy && !error && !visibleCampaigns.length ? <div className="ra-empty" role="status"><p>No promotions match this view.</p>{search ? <button className="ra-primary" onClick={() => setSearch("")}>Clear search</button> : <button className="ra-primary" onClick={() => go("campaigns")}>Manage campaigns</button>}</div> : null}
       </main>
     </> : <div className="ra-workspace">
-      <aside className={`ra-sidebar ${mobileNav ? "ra-open" : ""}`}>
+      <aside id="ra-navigation" className={`ra-sidebar ${mobileNav ? "ra-open" : ""}`}>
         <div className="ra-profile"><span>{session?.email}</span><small>GIGABYTE</small></div>
-        <button className="ra-all-promotions" onClick={() => { setGroup("Active"); go("promotions"); }}>♧ <span>All Active Promotions</span></button>
-        <button className="ra-all-promotions" onClick={() => { setGroup("Archived"); go("promotions"); }}>▣ <span>All Archived Promotions</span></button>
-        <nav aria-label="Campaign reports">{navigation.map(([key, icon, label]) => <button key={key} className={page === key ? "selected" : ""} aria-current={page === key ? "page" : undefined} onClick={() => go(key)}><span aria-hidden="true">{icon}</span><span>{label}</span>{["summaries", "pivot", "detailed"].includes(key) ? <span className="ra-chevron">⌄</span> : null}</button>)}</nav>
-        <div className="ra-operation-links"><small>OPERATIONS</small>{([ ["campaigns", "Campaigns"], ["payments", "Payments"], ["notifications", "Notifications"], ["audit", "Audit"] ] as [Page, string][]).map(([key, label]) => <button key={key} className={page === key ? "selected" : ""} onClick={() => go(key)}>{t(label)}</button>)}</div>
+        <button className="ra-all-promotions" onClick={() => { setGroup("Active"); go("promotions"); }}><span aria-hidden="true">♧</span><span>All Active Promotions</span></button>
+        <button className="ra-all-promotions" onClick={() => { setGroup("Archived"); go("promotions"); }}><span aria-hidden="true">▣</span><span>All Archived Promotions</span></button>
+        <nav aria-label="Campaign reports">{navigation.map(([key, icon, label]) => <button key={key} className={page === key ? "selected" : ""} aria-current={page === key ? "page" : undefined} onClick={() => go(key)}><span aria-hidden="true">{icon}</span><span>{label}</span></button>)}</nav>
+        <div className="ra-operation-links"><small>OPERATIONS</small>{([ ["campaigns", "Campaigns"], ["payments", "Payments"], ["notifications", "Notifications"], ["audit", "Audit"] ] as [Page, string][]).map(([key, label]) => <button key={key} className={page === key ? "selected" : ""} aria-current={page === key ? "page" : undefined} onClick={() => go(key)}>{t(label)}</button>)}</div>
       </aside>
       <div className="ra-workspace-content">
         <section className="ra-hero ra-campaign-hero"><h1>{campaign?.data.name ?? "Promotion operations"}</h1>{campaign ? <span className="ra-pill">{date(campaign.data.purchaseStart).split(",")[0]}　⋯　{date(campaign.data.purchaseEnd).split(",")[0]}</span> : null}<div className="ra-campaign-picker"><label>Promotion <select value={campaignId} onChange={event => setCampaignId(event.target.value)}><option value="">Select a promotion</option>{campaigns.map(value => <option key={value.id} value={value.id}>{value.data.name}</option>)}</select></label><button disabled={busy} onClick={() => void run(reload, "Overview refreshed.")}>{t("Refresh")}</button></div></section>
-        <main className="ra-main">
+        <main id="ra-main-content" tabIndex={-1} className="ra-main" aria-busy={loading || busy}>
           {error ? <p className="message error" role="alert">{t(error)}</p> : null}{message ? <p className="message" role="status">{message}</p> : null}{busy ? <p role="status">{t("Saving / loading…")}</p> : null}
           {["dashboard", "summaries", "detailed", "fraud", "payments"].includes(page) && !campaign ? <section className="ra-report-card"><h2>Select a promotion</h2><p>Choose a promotion above to view its reports and operations.</p></section> : null}
-          {page === "dashboard" && campaign ? <ReferenceDashboard key={campaign.id} campaign={campaign} claims={scopedClaims} payments={scopedPayments} refreshVersion={refreshVersion} onSummary={() => go("summaries")} onClaims={() => go("detailed")} /> : null}
-          {page === "summaries" && campaign ? <ReferenceSummary key={campaign.id} campaign={campaign} refreshVersion={refreshVersion} /> : null}
+          {page === "dashboard" && campaign ? <ReferenceDashboard key={campaign.id} campaign={campaign} claims={scopedClaims} payments={scopedPayments} refreshVersion={refreshVersion} onSummary={dimension => { setSummaryDimension(dimension); go("summaries"); }} onClaims={() => go("detailed")} onPayments={() => go("payments")} /> : null}
+          {page === "summaries" && campaign ? <ReferenceSummary key={`${campaign.id}:${summaryDimension}`} campaign={campaign} refreshVersion={refreshVersion} initialDimension={summaryDimension} /> : null}
           {page === "detailed" && campaign ? <ReferenceDetailed key={campaign.id} campaign={campaign} claims={scopedClaims} {...operationProps} /> : null}
           {page === "payments" && campaign ? <Payments key={campaign.id} payments={scopedPayments} claims={scopedClaims} {...operationProps} /> : null}
           {page === "fraud" && campaign ? <><section className="ra-report-card"><h2>Fraud Claims · Risk holds</h2><p>Our review workflow flags cases on hold. A risk hold is not a confirmed fraud decision. Fraud savings and fraud country analytics are not available.</p></section><Claims key={campaign.id} claims={scopedClaims.filter(value => value.onHold)} campaigns={[campaign]} {...operationProps} /></> : null}

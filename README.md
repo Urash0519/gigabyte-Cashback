@@ -5,6 +5,7 @@ Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。
 ## 本版功能
 
 - 2026-10-08 使用者參考樣式：新增獨立 `/reference/` 前台（以 26Q1 活動畫面為主）與 `/admin/reference/` 後台，沿用現有業務 API。原 `/`、`/admin/` 保留；[版本比較入口](https://cashback-uat-219894818230.asia-east1.run.app/compare/) 可開啟四個頁面。後台差異與後續缺口見 [Benamic 功能盤點](docs/Benamic-Backend-Gap-Analysis.md)，呈現與驗證範圍見 [參考樣式版本](docs/User-Reference-UI.md)。
+- 2026-10-08 使用者樣式 UI/UX 修正：改善手機／平板版面、文字對比、表格捲動、草稿離開保護及報表重試；原版維持不變。已在 1440／768／375px 實際驗證，詳見 [修正與驗證紀錄](docs/User-Reference-UX-Audit.md)。
 
 - Q1 / P0：完整活動設定 JSON 匯入／匯出（草稿與發布版本）、匯入差異及錯誤預覽、明確新增／更新草稿、伺服器預檢、產品／通路 CSV 批次維護與可重用主檔。新增 EF migration；活動快照、案件與付款核心保持不變。詳見 [架構與操作決策](docs/P0-Campaign-Configuration.md)。
 - 提供 [Q1 完整設定範本](frontend/apps/admin-web/public/templates/q1-campaign.json)，含原圖 59 型號、46 通路、五國共用 EUR 表及原圖主視覺；資料庫模擬活動由 `node scripts/seed-q1.mjs` 建立。歷史範本與可測試日期副本分開，資料來源與假設見 [Q1 來源文件](docs/Q1-Template-Sources.md)。不含 Q4 A+B 加碼，也不新增前台版型設定。

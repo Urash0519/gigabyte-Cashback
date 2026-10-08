@@ -96,6 +96,16 @@ export default function ReferenceApp() {
   const [searchReference, setSearchReference] = useState("");
   const [referenceError, setReferenceError] = useState("");
   const main = useRef<HTMLElement>(null);
+  const scrollToContent = useRef(!["portal", "promotion"].includes(readRoute().view));
+  const focusContent = useCallback((scroll: boolean) => {
+    const heading = main.current?.querySelector<HTMLElement>("h1") ?? [...(main.current?.querySelectorAll<HTMLElement>("h2") ?? [])].find(element => !element.closest("dialog"));
+    if (heading) {
+      heading.tabIndex = -1;
+      heading.focus({ preventScroll: true });
+      if (scroll) heading.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+    }
+    document.title = `${heading?.textContent ?? "Promotions"} · GIGABYTE Cashback`;
+  }, []);
   const referenceInput = useRef<HTMLInputElement>(null);
   const dirty = useRef(false);
   const previousHash = useRef(window.location.hash);
@@ -115,9 +125,15 @@ export default function ReferenceApp() {
   const selectedCampaign = (claim && snapshots[claim.id]) || campaign;
   const isPortal = route.view === "portal";
   const go = useCallback((view: View, changes: Partial<Route> = {}) => {
-    requestLeave(() => { window.location.hash = routeUrl({ ...readRoute(), view, ...changes }); });
-  }, [requestLeave]);
+    requestLeave(() => {
+      const nextHash = routeUrl({ ...readRoute(), view, ...changes });
+      if (window.location.hash === nextHash) focusContent(true);
+      else window.location.hash = nextHash;
+    });
+  }, [requestLeave, focusContent]);
   useEffect(() => {
+    const previousRestoration = window.history.scrollRestoration;
+    window.history.scrollRestoration = "manual";
     const handleHash = () => {
       if (window.location.hash !== previousHash.current && dirty.current) {
         const nextHash = window.location.hash;
@@ -126,20 +142,19 @@ export default function ReferenceApp() {
         return;
       }
       previousHash.current = window.location.hash;
+      scrollToContent.current = true;
       setRoute(readRoute()); setError(""); setMessage(""); setReferenceError("");
-      window.scrollTo({ top: 0, behavior: "instant" });
     };
     const beforeUnload = (event: BeforeUnloadEvent) => { if (dirty.current) { event.preventDefault(); event.returnValue = ""; } };
     window.addEventListener("hashchange", handleHash);
     window.addEventListener("beforeunload", beforeUnload);
-    return () => { window.removeEventListener("hashchange", handleHash); window.removeEventListener("beforeunload", beforeUnload); };
+    return () => { window.history.scrollRestoration = previousRestoration; window.removeEventListener("hashchange", handleHash); window.removeEventListener("beforeunload", beforeUnload); };
   }, [requestLeave]);
   useEffect(() => {
     if (loading) return;
-    const heading = main.current?.querySelector<HTMLElement>("h1") ?? [...(main.current?.querySelectorAll<HTMLElement>("h2") ?? [])].find(element => !element.closest("dialog"));
-    if (heading) { heading.tabIndex = -1; heading.focus({ preventScroll: true }); }
-    document.title = `${heading?.textContent ?? "Promotions"} · GIGABYTE Cashback`;
-  }, [route.view, route.claimId, route.campaignId, loading]);
+    focusContent(scrollToContent.current);
+    scrollToContent.current = false;
+  }, [route.view, route.claimId, route.campaignId, route.market, loading, focusContent]);
   const loadClaims = useCallback(async () => {
     const rows = await api.claims();
     const versions = [...new Map(rows.map(row => [row.campaignVersionId ?? row.id, row])).values()];

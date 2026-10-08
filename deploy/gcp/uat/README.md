@@ -10,7 +10,7 @@ Deployed and verified **2026-09-10**. Project `side-project-platform`, account `
 | Artifact Registry | `cashback-uat` | Regional Docker images: API, migrator and combined public/admin gateway. |
 | Cloud Build | On-demand builds | `cloudbuild.yaml`; source archive uses existing `side-project-platform_cloudbuild` bucket. |
 | IAM | `cashback-uat@side-project-platform.iam.gserviceaccount.com` | Dedicated runtime. Cloud SQL Client, bucket-scoped Object Admin and access to only runtime secrets. |
-| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00007-5jw`, 100% traffic. |
+| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00010-zls`, 100% traffic. |
 | Cloud Run Job | `cashback-uat-migrator` | 1 task, 1 vCPU / 1GiB, 0 retries; successful P0 execution `cashback-uat-migrator-7bgwh`. |
 | Cloud Storage | `side-project-platform-cashback-uat-evidence` | Private ABP claim evidence; same region. Runtime Object Admin + Legacy Bucket Reader (ABP requires `storage.buckets.get` before uploading). |
 | Cloud Storage | `side-project-platform-cashback-uat-keys` | Private persistent ASP.NET Core Data Protection keys across instance restarts; runtime Object Admin. Persisted XML key verified. |
@@ -70,6 +70,12 @@ Q1 version 2 only shortens the simulated summary; original conditions remain in 
 Rollback: route traffic to a previously verified revision while investigating; the additive catalog table can remain. Do not drop the new table or run a down migration on the shared database as part of a UI rollback. Do not change bank-encryption secrets. Preserve the existing open-UAT access decision.
 
 ## Build and release
+
+### Reference navigation follow-up — 2026-10-08
+
+Cloud Build `ec098b34-f58d-4279-a881-8097b8b584a9` succeeded. Gateway tag `uat-20261008-reference-navigation`, digest `sha256:516697a265750a6053bdbac71528c79b3576a725ccafcd1471478b356b632095`. Revision `cashback-uat-00010-zls` became Ready at 16:30 Asia/Taipei and serves 100% traffic. Previous revision `cashback-uat-00009-s96` is the immediate rollback target. API, database and access configuration are unchanged.
+
+Reference navigation now scrolls to the selected content instead of the top artwork, with keyboard focus and reduced-motion support. Initial promotion visits retain the hero. Local navigation checks passed at 1440/768/375px, including repeated same-page clicks, back/forward, draft leave protection and admin menu closing. Both frontend production builds and anonymous-entry/session checks passed. See [audit](../../../docs/User-Reference-UX-Audit.md).
 
 ### Reference UI/UX follow-up — 2026-10-08
 

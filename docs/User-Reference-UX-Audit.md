@@ -81,7 +81,19 @@
 - GCP 最終 Cloud Build `eb85164a-219e-486b-b1fe-8cb8181b7ad1` 成功；`cashback-uat-00009-s96` Ready，100% 流量。線上前台與後台參考版再驗 1440／768／375px，載入真實 Q1 活動及報表，瀏覽器沒有 Error／Warning；八個匿名入口及後台需登入限制檢查通過。
 - 線上專用草稿新增商品後離開會出現保護提示；放棄未存修改返回追蹤頁，沒有保存新商品。
 
+### 2026-10-08 導覽捲動補修
+
+- **P1：切換內容後回到頁首。** 前台 hash 導覽固定執行 `scrollTo(top: 0)`，FAQ、條款及追蹤頁切換後先看到活動大圖，使用者需要再次往下找內容。改成捲到新頁面的主要標題，保留 24px 上方間距並同步鍵盤焦點；再次點同頁連結也會重新定位。
+- 首次開啟活動頁保留主視覺；FAQ／表單等深連結、瀏覽器上一頁／下一頁會定位內容。參考版以手動 history scroll restoration 避免原生位置復原和內容定位互相覆蓋。
+- 後台導覽先以 `preventScroll` 聚焦，再將主要內容區捲至視窗附近，手機／平板同時關閉導覽選單。兩個參考版皆依 `prefers-reduced-motion` 決定立即或平滑捲動。
+- 修改檔案：前台 `ReferenceApp.tsx`、`reference.css`，後台 `ReferenceAdminApp.tsx`、`reference-admin.css`。原版頁面、共用表單與 API 均無修改。
+- 實際瀏覽器驗證 1440／768／375px：FAQ、同頁重點、條款、隱私、追蹤、返回活動頁，標題可見且無整頁水平溢位；短頁面受最大捲動距離限制時，標題仍在可視區域。補測國家選擇、指定測試草稿、鍵盤 Enter、未保存提示的取消／放棄、上一頁／下一頁。沒有保存草稿、送出申請或接受條款。
+- 後台桌面 Dashboard／Summaries、平板 Detailed、手機 Dashboard 導覽通過，內容區及焦點可見，選單正常關閉。前後台瀏覽器沒有 Error／Warning。截圖及量測存於本機 `.uat-test/navigation/`。
+- 兩個前端 TypeScript／正式建置與 `git diff --check` 通過，原版 CSS hash 保持 `index-8JaS8b_Q.css`／`index-CNIXRhKk.css`。
+- Cloud Build `ec098b34-f58d-4279-a881-8097b8b584a9` 成功；`cashback-uat-00010-zls` Ready 並接收 100% 流量。線上首訪保留主視覺；FAQ 在 1440／768／375px、平板條款、手機追蹤再驗通過。八個匿名入口與後台需登入限制檢查通過。
+
 ## 限制及未驗證項目
+
 
 - 沒有執行真實銀行付款、退款、寄信、正式 Google 登入或申請送出；本次以 UI、讀取資料及專用草稿保存驗證為主。
 - 未完成 Safari／iOS 真機、多種螢幕閱讀器或完整 WCAG 2.2 合規稽核。

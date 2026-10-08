@@ -181,6 +181,7 @@
 .reference-public.ref-portal-page { --ref-focus: #954000; }
 .reference-public :is(button, a, input, select, textarea, summary, [tabindex]):focus-visible { outline: 3px solid var(--ref-focus); outline-offset: 3px; }
 .reference-public :is(h1, h2, main):focus { outline: none; }
+.reference-public :is(h1, h2, #ref-main) { scroll-margin-block-start: 24px; }
 .reference-public :is(button, select, input:not([type="checkbox"]), textarea) { min-height: 44px; }
 .reference-public button:disabled { cursor: not-allowed; opacity: .65; }
 .reference-public button:not(:disabled):hover { filter: brightness(1.12); }

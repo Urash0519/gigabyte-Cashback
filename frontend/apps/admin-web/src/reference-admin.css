@@ -22,6 +22,7 @@
 .reference-admin :is(button,a,select,input,textarea,summary,[tabindex]):focus-visible{outline:3px solid var(--ra-focus);outline-offset:3px;box-shadow:0 0 0 5px #fff}
 .reference-admin .ra-sidebar :is(button,a):focus-visible{outline-offset:-4px;box-shadow:none;outline-color:#ffe08a}
 .reference-admin main:focus{outline:none}.reference-admin main:focus-visible{outline:3px solid var(--ra-focus);outline-offset:-3px;box-shadow:none}
+.reference-admin #ra-main-content{scroll-margin-block-start:24px}
 .reference-admin .ra-skip-link{position:fixed;left:16px;top:-100px;padding:12px 18px;background:#fff;color:#174970;z-index:1100;border:2px solid #174970;border-radius:4px;font-weight:700}.reference-admin .ra-skip-link:focus{top:12px}
 .reference-admin .ra-loading-status{margin:0;padding:12px 24px;background:#e5f1f2;color:#17444c;font-size:14px}
 .reference-admin .ra-primary,.reference-admin .button-primary{background:var(--ra-teal);min-height:36px}.reference-admin .ra-primary:hover,.reference-admin .button-primary:hover{background:#055f6a}

@@ -83,7 +83,14 @@ export function ReferenceAdminApp() {
   const scopedClaims = claims.filter(value => value.data.campaignId === campaignId);
   const claimIds = new Set(scopedClaims.map(value => value.id));
   const scopedPayments = payments.filter(value => claimIds.has(value.claimId));
-  const go = (nextPage: Page) => { setPage(nextPage); setMobileNav(false); setMessage(""); requestAnimationFrame(() => document.getElementById("ra-main-content")?.focus()); };
+  const go = (nextPage: Page) => {
+    setPage(nextPage); setMobileNav(false); setMessage("");
+    requestAnimationFrame(() => {
+      const content = document.getElementById("ra-main-content");
+      content?.focus({ preventScroll: true });
+      content?.scrollIntoView({ block: "start", behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "instant" : "smooth" });
+    });
+  };
   const openCampaign = (value: Campaign) => { setCampaignId(value.id); go("dashboard"); };
   const visibleCampaigns = campaigns.filter(value => value.data.status === group && value.data.name.toLowerCase().includes(search.toLowerCase()));
   const operationProps = { run, reload, busy };

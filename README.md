@@ -4,6 +4,8 @@ Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。
 
 ## 本版功能
 
+- 2026-10-08 使用者參考樣式：新增獨立 `/reference/` 前台（以 26Q1 活動畫面為主）與 `/admin/reference/` 後台，沿用現有業務 API。原 `/`、`/admin/` 保留；[版本比較入口](https://cashback-uat-219894818230.asia-east1.run.app/compare/) 可開啟四個頁面。後台差異與後續缺口見 [Benamic 功能盤點](docs/Benamic-Backend-Gap-Analysis.md)，呈現與驗證範圍見 [參考樣式版本](docs/User-Reference-UI.md)。
+
 - Q1 / P0：完整活動設定 JSON 匯入／匯出（草稿與發布版本）、匯入差異及錯誤預覽、明確新增／更新草稿、伺服器預檢、產品／通路 CSV 批次維護與可重用主檔。新增 EF migration；活動快照、案件與付款核心保持不變。詳見 [架構與操作決策](docs/P0-Campaign-Configuration.md)。
 - 提供 [Q1 完整設定範本](frontend/apps/admin-web/public/templates/q1-campaign.json)，含原圖 59 型號、46 通路、五國共用 EUR 表及原圖主視覺；資料庫模擬活動由 `node scripts/seed-q1.mjs` 建立。歷史範本與可測試日期副本分開，資料來源與假設見 [Q1 來源文件](docs/Q1-Template-Sources.md)。不含 Q4 A+B 加碼，也不新增前台版型設定。
 - 未送出草稿在開啟與送出前檢查最新發布版本，提示確認後保留資料與附件套用，並重新確認條款／隱私同意；已送出及補件案件保持送出時版本。
@@ -20,7 +22,7 @@ Phase 1 第一版：React 前台／後台 + ABP 10.6.0、.NET 10、PostgreSQL。
 
 專案 `side-project-platform`，部署帳號 `yoyo.chen@gigabyte.com`，區域 `asia-east1`。目標為 3 人約 30 分鐘測試：Cloud Run 閒置縮到 0、最多 1 實例；Cloud SQL PostgreSQL 17 `db-f1-micro`／10GB SSD／單區；附件與 Cookie 金鑰使用私有 Cloud Storage，密碼使用 Secret Manager。
 
-2026-10-02 已更新並驗證 UAT 案件與審核體驗：Cloud Run `cashback-uat-00006-crp` 承接 100% 流量。既有 Cloud SQL、Artifact Registry、私有 Storage bucket、Secret Manager 與執行身份維持沿用；完整資源、映像及測試紀錄見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
+2026-10-08 已新增並驗證使用者樣式比較版：Cloud Run `cashback-uat-00007-5jw` 承接 100% 流量。前台以 26Q1 活動畫面為主；現行前後台入口保留。既有 API、Cloud SQL、私有 Storage bucket、Secret Manager 與執行身份沿用；完整資源、映像及測試紀錄見 [GCP UAT 紀錄](deploy/gcp/uat/README.md)。
 
 - [UAT 前台](https://cashback-uat-219894818230.asia-east1.run.app/)／[UAT 後台](https://cashback-uat-219894818230.asia-east1.run.app/admin/)
 - 依使用者最新決策，UAT 移除入口密碼，任何人可直接開啟前後台，再按「開發環境登入」使用模擬身份 `yoyo.chen@gigabyte.com`。不需要 Google 帳號或 UAT 密碼。

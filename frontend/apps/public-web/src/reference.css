@@ -1,0 +1,225 @@
+.reference-public { --ref-orange: #ff7600; --ref-gold: #f4cd65; min-height: 100vh; display: flex; flex-direction: column; font-family: Arial, "Segoe UI", sans-serif; font-size: 14px; line-height: 1.45; }
+.reference-public h1, .reference-public h2, .reference-public h3 { letter-spacing: 0; font-weight: 400; }
+.reference-public h1 { font-size: 30px; }
+.reference-public h2 { font-size: 26px; }
+.reference-public a { color: inherit; }
+.reference-public button:focus-visible, .reference-public a:focus-visible, .reference-public input:focus-visible, .reference-public select:focus-visible { outline: 3px solid #ffa744; }
+.reference-public .ref-compare-bar { min-height: 32px; padding: 7px 24px; display: flex; align-items: center; justify-content: space-between; gap: 16px; background: #272727; color: #ddd; font-size: 11px; }
+.reference-public .ref-compare-bar a { text-decoration: underline; }
+.reference-public .ref-page-nav { display: flex; justify-content: space-between; align-items: center; gap: 16px; min-height: 46px; padding: 8px 28px; background: #080808; color: #eee; }
+.reference-public .ref-page-nav > button { font-size: 19px; font-weight: 900; letter-spacing: -.04em; }
+.reference-public .ref-page-nav > div { display: flex; align-items: center; flex-wrap: wrap; justify-content: flex-end; gap: 20px; }
+.reference-public .ref-page-nav button { background: transparent; border: 0; color: inherit; padding: 6px 0; }
+.reference-public .ref-page-nav select { background: #151515; color: white; border: 1px solid #555; padding: 3px; }
+.reference-public .ref-hero { width: 100%; height: auto; display: block; aspect-ratio: 1920 / 859; object-fit: cover; }
+.reference-public .ref-hero-placeholder, .reference-public .ref-card-placeholder { background: linear-gradient(135deg, #141414, #514224); color: white; aspect-ratio: 1920 / 859; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 18px; width: 100%; }
+.reference-public .ref-hero-placeholder b, .reference-public .ref-card-placeholder b { font-size: clamp(26px, 5vw, 65px); letter-spacing: -.05em; }
+.reference-public .ref-hero-placeholder span { font-size: 26px; }
+.reference-public .ref-card-placeholder { aspect-ratio: 1.8; }
+.reference-public .ref-card-placeholder b { font-size: 26px; }
+.reference-public .ref-main { flex: 1; min-height: 70vh; }
+.reference-public .ref-diagonal { background-color: #181818; background-image: linear-gradient(100deg, transparent 40%, #5e42102e 100%), repeating-linear-gradient(57deg, #080808 0, #080808 60px, #151515 61px, #272727 112px, #323232 114px, #171717 116px, #151515 173px, #090909 180px, #090909 214px); color: #eee; }
+.reference-public .ref-container { width: min(1100px, calc(100% - 64px)); margin: 0 auto; }
+.reference-public .ref-content { width: min(980px, calc(100% - 48px)); margin: 0 auto; padding: 65px 0 90px; }
+.reference-public .ref-content > h1 { text-align: center; margin-bottom: 42px; }
+.reference-public .ref-notice { width: min(1100px, calc(100% - 32px)); margin: 20px auto; padding: 15px 18px; color: #eee; background: #303030; border: 1px solid #777; }
+.reference-public .ref-notice.ref-error { border-color: #ff9b94; color: #ffd4cf; }
+.reference-public .ref-translucent { background: #000b; padding: 42px 48px; text-align: center; }
+.reference-public .ref-text-link { border: 0; background: transparent; color: var(--ref-orange); text-decoration: underline; padding: 5px 0; }
+.reference-public .ref-button, .reference-public .button-primary { border: 0; border-radius: 9px; background: #ff6b00; color: white; font-weight: 400; padding: 13px 30px; font-size: 20px; }
+.reference-public .ref-plain { background: none; color: inherit; border: 0; padding: 0; text-align: left; font-weight: inherit; }
+.reference-public .ref-country-panel { background: #000a; width: min(1050px, calc(100% - 64px)); margin: 90px auto 110px; padding: 90px 70px; }
+.reference-public .ref-country-panel h1 { color: var(--ref-orange); text-align: center; font-size: 38px; margin-bottom: 75px; }
+.reference-public .ref-countries { display: grid; grid-template-columns: repeat(3, 1fr); gap: 44px 20px; }
+.reference-public .ref-countries button { display: flex; align-items: center; flex-direction: column; gap: 12px; color: #eee; background: none; border: 0; text-transform: uppercase; padding: 12px; }
+.reference-public .ref-countries button:hover { background: #ffffff15; }
+.reference-public .ref-flag { display: inline-block; width: 56px; height: 39px; border: 1px solid #ffffff28; }
+.reference-public .ref-intro { padding: 55px 32px 52px; text-align: center; }
+.reference-public .ref-intro > h1 { font-size: 36px; max-width: 1050px; margin: 0 auto 15px; }
+.reference-public .ref-intro-copy { font-size: 24px; max-width: 1000px; margin: 0 auto 30px; }
+.reference-public .ref-dates { display: flex; gap: 90px; justify-content: center; margin-bottom: 48px; }
+.reference-public .ref-dates strong { display: block; font-size: 19px; font-weight: 400; }
+.reference-public .ref-intro h2 { color: var(--ref-orange); }
+.reference-public .ref-process { list-style: none; display: grid; grid-template-columns: repeat(3, 1fr); gap: 48px; max-width: 1000px; margin: 30px auto 55px; padding: 0; color: #ffb51e; text-align: left; }
+.reference-public .ref-process li { position: relative; padding-left: 40px; }
+.reference-public .ref-process li:not(:last-child)::after { content: "→"; position: absolute; right: -38px; top: 50%; font-size: 24px; }
+.reference-public .ref-process span { display: grid; place-items: center; position: absolute; left: 0; top: 0; border: 1px solid white; color: #ffb51e; border-radius: 50%; width: 30px; height: 30px; font-size: 20px; }
+.reference-public .ref-process p { margin-bottom: 16px; }
+.reference-public .ref-process b { font-weight: 400; }
+.reference-public .ref-action-cards { display: flex; justify-content: center; gap: 100px; margin: 0 auto 24px; }
+.reference-public .ref-action-cards button { position: relative; border: 2px solid #ddd; border-radius: 0; background: #080808b5; color: #ffc537; width: 210px; min-height: 196px; padding: 25px 18px; box-shadow: 4px 4px 0 #0009; }
+.reference-public .ref-action-cards button::before { content: "•••"; position: absolute; top: 5px; left: 12px; color: white; }
+.reference-public .ref-action-cards span { display: block; font-size: 64px; line-height: 1.3; }
+.reference-public .ref-action-cards b { font-weight: 400; }
+.reference-public .ref-gold { background-color: #806837; background-image: linear-gradient(90deg, #4a361982, transparent 60%, #fff08d62), repeating-linear-gradient(0deg, transparent 0, transparent 120px, #eaca7c90 121px, #f6de9670 123px, transparent 125px), repeating-linear-gradient(90deg, transparent 0, transparent 185px, #eaca7c90 186px, #f6de9670 188px, transparent 190px), linear-gradient(145deg, #584321, #a98a52 45%, #c4ac6a 65%, #80652d); }
+.reference-public .ref-products { padding: 50px 0 65px; }
+.reference-public .ref-products h2 { color: #ffc63f; margin-bottom: 28px; }
+.reference-public .ref-category-tabs { display: flex; gap: 70px; margin: 0 0 32px; }
+.reference-public .ref-category-tabs button { border: 0; background: none; color: #fff; text-transform: uppercase; min-width: 120px; padding: 8px; }
+.reference-public .ref-category-tabs span { display: grid; place-items: center; width: 130px; height: 110px; margin: 0 auto 12px; border: 5px double white; border-radius: 20px; font-size: 60px; background: #17171740; }
+.reference-public .ref-category-tabs .active { color: #ffc83c; }
+.reference-public .ref-category-tabs .active span { border-color: #ffb21e; }
+.reference-public .ref-category-tabs img { display: block; width: 150px; height: 154px; object-fit: cover; margin: 0 auto 12px; }
+.reference-public .ref-category-tabs button:not(.active) img { filter: grayscale(1); }
+.reference-public .ref-retailer-toggle { display: flex; align-items: center; gap: 9px; margin: 20px 0; color: #ccc; }
+.reference-public .ref-retailer-toggle input { accent-color: #ff8a00; width: 16px; height: 16px; }
+.reference-public .ref-product-search { display: flex; justify-content: flex-end; gap: 14px; align-items: center; margin: 0 0 18px; }
+.reference-public .ref-product-search input { background: #f5f0e2; color: #141414; padding: 6px 10px; border: 1px solid #e1ca84; max-width: 100%; }
+.reference-public .table-wrap { overflow-x: auto; }
+.reference-public table { border-collapse: collapse; width: 100%; color: inherit; }
+.reference-public th, .reference-public td { padding: 8px 14px; border-bottom: 1px solid #ffffff36; text-align: left; }
+.reference-public .ref-products th { background: #66561e; color: #eee3ba; font-size: 19px; font-weight: 400; }
+.reference-public .ref-products td { background: #c3ae69; color: #10100c; padding: 6px 14px; border-color: #e7d497; }
+.reference-public .ref-products td:first-child { color: #111; }
+.reference-public .ref-products td:last-child { font-weight: 700; width: 30%; }
+.reference-public .ref-fine-print { margin: 32px 0 0; font-size: 11px; }
+.reference-public .ref-important { padding: 55px 30px; background: repeating-linear-gradient(0deg, #080808 0, #080808 25px, #313131 26px, #111 29px, #080808 35px); }
+.reference-public .ref-info-box { max-width: 820px; margin: 0 auto; padding: 36px 32px; border: 1px solid #8a8133; border-radius: 24px; background: #060606e0; color: #eee594; }
+.reference-public .ref-info-box h2 { color: #eee594; margin-bottom: 16px; }
+.reference-public .ref-info-box ul { margin: 0 0 12px; padding-left: 20px; }
+.reference-public .ref-info-box li { padding-bottom: 8px; }
+.reference-public .ref-retailers { background: black; padding: 52px 0 65px; }
+.reference-public .ref-retailers h2 { margin-bottom: 16px; }
+.reference-public .ref-retailer-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 18px; margin-top: 28px; }
+.reference-public .ref-retailer-grid article { border: 1px solid #383838; border-radius: 30px; min-height: 145px; padding: 24px 15px; display: flex; justify-content: center; align-items: center; flex-direction: column; text-align: center; gap: 10px; overflow-wrap: anywhere; }
+.reference-public .ref-retailer-grid strong { font-size: 17px; }
+.reference-public .ref-retailer-grid small { color: #bbb; }
+.reference-public .ref-retailer-grid a { color: #ffad5d; font-size: 12px; }
+.reference-public .ref-tracker-intro { max-width: 900px; margin: 0 auto 50px; font-size: 18px; }
+.reference-public .ref-tracker-intro p:last-of-type { margin-bottom: 22px; }
+.reference-public .ref-tracker-search { max-width: 740px; margin: 0 auto; padding: 44px 65px; }
+.reference-public .ref-tracker-search h2 { font-size: 32px; color: var(--ref-orange); margin-bottom: 34px; }
+.reference-public .ref-tracker-search label { text-align: left; margin-bottom: 28px; }
+.reference-public .ref-tracker-search input { width: 100%; min-height: 43px; border-radius: 0; border: 1px solid #aaa; color: #171717; background: white; }
+.reference-public .ref-tracker-search .ref-button { min-width: 190px; }
+.reference-public .ref-tracker-signin { text-align: center; margin-top: 20px; }
+.reference-public .ref-claim-results { padding: 30px 24px; margin: 50px -80px 0; background: #060606dd; }
+.reference-public .ref-result-head { display: flex; gap: 20px; align-items: center; margin-bottom: 20px; }
+.reference-public .ref-result-head h2 { margin-right: auto; }
+.reference-public .ref-claim-results table { font-size: 13px; min-width: 700px; }
+.reference-public .ref-claim-results td small { display: block; color: #aaa; font-size: 10px; }
+.reference-public .badge { background: #333; color: #eee; border: 1px solid #777; }
+.reference-public .badge-approved, .reference-public .badge-paid { background: #133728; border-color: #68a384; color: #bdffd9; }
+.reference-public .badge-rejected, .reference-public .badge-failed { background: #53251b; border-color: #aa7866; color: #ffd3cc; }
+.reference-public .badge-moreinforequired, .reference-public .badge-onhold { background: #5c441d; color: #ffe1a6; }
+.reference-public .ref-case-status { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin-bottom: 25px; }
+.reference-public .ref-case-status .ref-text-link { margin-left: auto; }
+.reference-public .ref-content .panel { background: #080808bd; border: 1px solid #666; border-radius: 0; color: #eee; margin-bottom: 28px; }
+.reference-public .ref-content .panel h2 { font-size: 23px; }
+.reference-public .ref-content .panel-head { margin-bottom: 24px; }
+.reference-public .ref-content .action-form { margin-top: 16px; }
+.reference-public .ref-content .field input, .reference-public .ref-content .field select { border-radius: 0; background: white; color: #141414; }
+.reference-public .ref-content .muted { color: #bbb; }
+.reference-public .ref-timeline { border-left: 1px solid #ff9900; list-style: none; padding-left: 30px; }
+.reference-public .ref-timeline li { margin: 24px 0; }
+.reference-public .ref-timeline time { color: #aaa; }
+.reference-public .ref-faq-list { max-width: 830px; margin: 0 auto; }
+.reference-public .ref-faq-list details { margin: 0 0 22px; }
+.reference-public .ref-faq-list summary { cursor: pointer; }
+.reference-public .ref-faq-list details p { padding: 15px 0 0 20px; color: #ddd; }
+.reference-public .ref-legal { max-width: 900px; margin: 0 auto; line-height: 1.8; }
+.reference-public .pre-wrap { white-space: pre-wrap; overflow-wrap: anywhere; }
+.reference-public .ref-support { margin-top: 40px; text-align: center; }
+.reference-public .ref-support a { color: #ff9e47; }
+.reference-public .ref-claim-form { width: min(1100px, calc(100% - 48px)); margin: 0 auto; padding: 55px 0 100px; }
+.reference-public .ref-claim-form .page-head { color: #eee; margin-bottom: 30px; }
+.reference-public .ref-claim-form .page-head h1 { font-size: 23px; }
+.reference-public .ref-claim-form .claim-wizard { display: block; }
+.reference-public .ref-claim-form .claim-step-sidebar { position: static; padding: 0; }
+.reference-public .ref-claim-form .claim-eyebrow { display: none; }
+.reference-public .ref-claim-form .claim-step-list { display: grid; grid-template-columns: repeat(5, 1fr); gap: 24px; margin: 0 0 24px; }
+.reference-public .ref-claim-form .claim-step-list button { border-radius: 0; border-top: 3px solid #b8b8b8; color: #ddd; background: transparent; padding: 8px 0; text-transform: uppercase; font-weight: 400; align-items: flex-start; }
+.reference-public .ref-claim-form .claim-step-list button.active { border-color: #ffb30b; color: #ffb30b; }
+.reference-public .ref-claim-form .claim-step-number { display: none; }
+.reference-public .ref-claim-form .claim-sidebar-help { color: #ddd; margin: 15px 0 42px; }
+.reference-public .ref-claim-form .claim-step-content { max-width: 750px; margin: 0 auto; }
+.reference-public .ref-claim-form .panel { background: transparent; border: 0; border-radius: 0; box-shadow: none; color: #eee; padding: 20px 0; }
+.reference-public .ref-claim-form .panel h2 { font-size: 27px; }
+.reference-public .ref-claim-form .panel-head { margin-bottom: 20px; }
+.reference-public .ref-claim-form .claim-step-hint { color: #ddd; }
+.reference-public .ref-claim-form .form-grid { display: flex; flex-direction: column; gap: 15px; }
+.reference-public .ref-claim-form .field { display: grid; grid-template-columns: 1fr 1fr; align-items: center; gap: 20px; margin: 0; font-weight: 400; }
+.reference-public .ref-claim-form .field input, .reference-public .ref-claim-form .field select { background: #fff; color: #161616; border: 1px solid #b3b3b3; border-radius: 0; min-height: 39px; padding: 7px 10px; }
+.reference-public .ref-claim-form .field input[type="file"] { background: transparent; color: #eee; border: 0; padding: 7px 0; }
+.reference-public .ref-claim-form .actions { justify-content: center; margin-top: 35px; }
+.reference-public .button-light { background: transparent; border: 1px solid #bbb; color: #eee; border-radius: 4px; }
+.reference-public .button-danger { background: #70251c; color: #ffded6; border: 1px solid #af6258; }
+.reference-public .ref-claim-form .line-item, .reference-public .ref-claim-form .claim-review-block { background: #0007; border: 1px solid #777; border-radius: 0; }
+.reference-public .ref-claim-form .claim-upload-card, .reference-public .ref-claim-form .claim-upload-card.has-files { background: #0009; border-color: #aaa; }
+.reference-public .ref-claim-form .claim-upload-card small, .reference-public .ref-claim-form .claim-review-evidence small, .reference-public .ref-claim-form .claim-upload-file small, .reference-public .ref-claim-form .muted, .reference-public .ref-claim-form .details dt { color: #ccc; }
+.reference-public .ref-claim-form .claim-upload-symbol { background: #282828; color: #ffb244; }
+.reference-public .ref-claim-form .claim-reward-summary { border: 1px solid #777; border-radius: 0; background: #0009; }
+.reference-public .ref-claim-form .claim-success { background: #080808bd; color: #eee; }
+.reference-public .ref-claim-form .claim-success-summary, .reference-public .ref-claim-form .claim-next-steps { background: #191919; border-color: #777; }
+.reference-public .ref-claim-form .claim-success p, .reference-public .ref-claim-form .claim-success small, .reference-public .ref-claim-form .claim-next-steps li { color: #ddd; }
+.reference-public .message { background: #202020; color: #fff; border: 1px solid #777; }
+.reference-public .message.error { color: #ffdad4; background: #54241b; }
+.reference-public .message.info { color: #ffe3a9; background: #493414; }
+.reference-public .ref-footer { background: #242424; color: #ddd; min-height: 78px; padding: 28px max(28px, calc((100% - 1200px) / 2)); display: flex; justify-content: space-between; align-items: center; gap: 25px; font-size: 11px; }
+.reference-public .ref-footer div { display: flex; gap: 15px; align-items: center; flex-wrap: wrap; }
+.reference-public .ref-footer button { color: #ddd; border: 0; background: transparent; text-decoration: underline; padding: 0; font-size: inherit; }
+.reference-public .ref-sr-only { position: absolute; width: 1px; height: 1px; padding: 0; overflow: hidden; clip: rect(0, 0, 0, 0); white-space: nowrap; border: 0; }
+.reference-public.ref-portal-page { background: white; color: #080808; }
+.reference-public .ref-portal-header { text-align: center; padding: 35px 20px 12px; }
+.reference-public .ref-portal-header h1 { font-size: 34px; font-weight: 900; letter-spacing: -.05em; }
+.reference-public .ref-portal-header sup { font-size: 9px; vertical-align: super; letter-spacing: 0; }
+.reference-public .ref-portal-main { flex: 1; padding: 15px 24px 130px; width: min(1160px, 100%); margin: 0 auto; min-height: calc(100vh - 220px); text-align: center; }
+.reference-public .ref-portal-main h2 { margin-bottom: 45px; }
+.reference-public .ref-offers { display: flex; justify-content: center; flex-wrap: wrap; gap: 42px; margin-bottom: 54px; }
+.reference-public .ref-promotion-card { text-align: left; width: 440px; max-width: 100%; }
+.reference-public .ref-art-link { display: block; border: 0; background: transparent; width: 100%; padding: 0; margin-bottom: 20px; }
+.reference-public .ref-card-art { display: block; width: 100%; aspect-ratio: 1.8; object-fit: cover; }
+.reference-public .ref-promotion-card small { color: #777; font-size: 11px; }
+.reference-public .ref-promotion-card h3 { font-size: 20px; font-weight: 700; margin: 3px 0 22px; }
+.reference-public .ref-promotion-card p { font-size: 12px; margin-bottom: 18px; }
+.reference-public .ref-tags { display: flex; flex-wrap: wrap; justify-content: center; gap: 16px; font-size: 11px; color: #777; }
+.reference-public .ref-portal-empty { margin-bottom: 60px; color: #777; }
+.reference-public .ref-portal-main .ref-text-link { color: #555; }
+@media (min-width: 1600px) { .reference-public .ref-intro { padding: 75px 32px; } .reference-public .ref-hero { max-height: 900px; } }
+@media (max-width: 1150px) { .reference-public .ref-claim-results { margin: 40px 0 0; } .reference-public .ref-retailer-grid { grid-template-columns: repeat(4, 1fr); } }
+@media (max-width: 760px) {
+  .reference-public .ref-compare-bar { padding: 7px 12px; flex-wrap: wrap; gap: 5px 14px; }
+  .reference-public .ref-compare-bar span { order: 3; width: 100%; }
+  .reference-public .ref-page-nav { padding: 8px 12px; gap: 10px; align-items: flex-start; }
+  .reference-public .ref-page-nav > div { gap: 7px 12px; font-size: 11px; }
+  .reference-public .ref-container { width: calc(100% - 32px); }
+  .reference-public .ref-content { width: calc(100% - 32px); padding: 40px 0 60px; }
+  .reference-public .ref-content > h1 { font-size: 25px; margin-bottom: 30px; }
+  .reference-public .ref-country-panel { width: calc(100% - 32px); margin: 35px auto 55px; padding: 40px 14px; }
+  .reference-public .ref-country-panel h1 { font-size: 27px; margin-bottom: 40px; }
+  .reference-public .ref-countries { grid-template-columns: repeat(2, 1fr); gap: 25px 8px; }
+  .reference-public .ref-intro { padding: 40px 16px; }
+  .reference-public .ref-intro > h1 { font-size: 27px; }
+  .reference-public .ref-intro-copy { font-size: 19px; }
+  .reference-public .ref-dates { gap: 25px; font-size: 12px; }
+  .reference-public .ref-dates strong { font-size: 14px; }
+  .reference-public .ref-process { gap: 28px; display: flex; flex-direction: column; max-width: 440px; }
+  .reference-public .ref-process li:not(:last-child)::after { display: none; }
+  .reference-public .ref-action-cards { gap: 12px; }
+  .reference-public .ref-action-cards button { width: 155px; min-height: 140px; padding: 15px 7px; font-size: 10px; }
+  .reference-public .ref-action-cards span { font-size: 46px; }
+  .reference-public .ref-category-tabs { gap: 10px; flex-wrap: wrap; justify-content: center; }
+  .reference-public .ref-category-tabs button { min-width: 95px; font-size: 11px; }
+  .reference-public .ref-category-tabs span { width: 90px; height: 80px; font-size: 43px; }
+  .reference-public .ref-category-tabs img { width: 90px; height: 92px; }
+  .reference-public .ref-product-search { justify-content: flex-start; flex-wrap: wrap; }
+  .reference-public .ref-retailer-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .reference-public .ref-retailer-grid article { min-height: 130px; border-radius: 22px; }
+  .reference-public .ref-info-box { padding: 24px; }
+  .reference-public .ref-translucent { padding: 28px 20px; }
+  .reference-public .ref-tracker-intro { font-size: 15px; }
+  .reference-public .ref-tracker-search h2 { font-size: 26px; }
+  .reference-public .ref-result-head { flex-wrap: wrap; gap: 12px; }
+  .reference-public .ref-result-head h2 { width: 100%; }
+  .reference-public .ref-claim-form { width: calc(100% - 32px); padding: 35px 0 60px; }
+  .reference-public .ref-claim-form .claim-step-list { gap: 9px; display: flex; flex-wrap: wrap; }
+  .reference-public .ref-claim-form .claim-step-list button { width: calc(33.333% - 6px); font-size: 11px; }
+  .reference-public .ref-claim-form .field { grid-template-columns: 1fr; gap: 6px; }
+  .reference-public .ref-claim-form .claim-upload-card { padding: 20px 15px; }
+  .reference-public .ref-claim-form .button-primary { font-size: 16px; }
+  .reference-public .ref-footer { flex-direction: column; align-items: flex-start; padding: 22px 20px; gap: 16px; }
+  .reference-public .ref-portal-header { padding-top: 25px; }
+  .reference-public .ref-portal-header h1 { font-size: 28px; }
+  .reference-public .ref-portal-main { padding: 15px 20px 60px; }
+  .reference-public .ref-promotion-card { width: 440px; }
+}

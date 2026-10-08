@@ -10,7 +10,7 @@ Deployed and verified **2026-09-10**. Project `side-project-platform`, account `
 | Artifact Registry | `cashback-uat` | Regional Docker images: API, migrator and combined public/admin gateway. |
 | Cloud Build | On-demand builds | `cloudbuild.yaml`; source archive uses existing `side-project-platform_cloudbuild` bucket. |
 | IAM | `cashback-uat@side-project-platform.iam.gserviceaccount.com` | Dedicated runtime. Cloud SQL Client, bucket-scoped Object Admin and access to only runtime secrets. |
-| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00006-crp`, 100% traffic. |
+| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00007-5jw`, 100% traffic. |
 | Cloud Run Job | `cashback-uat-migrator` | 1 task, 1 vCPU / 1GiB, 0 retries; successful P0 execution `cashback-uat-migrator-7bgwh`. |
 | Cloud Storage | `side-project-platform-cashback-uat-evidence` | Private ABP claim evidence; same region. Runtime Object Admin + Legacy Bucket Reader (ABP requires `storage.buckets.get` before uploading). |
 | Cloud Storage | `side-project-platform-cashback-uat-keys` | Private persistent ASP.NET Core Data Protection keys across instance restarts; runtime Object Admin. Persisted XML key verified. |
@@ -70,6 +70,23 @@ Q1 version 2 only shortens the simulated summary; original conditions remain in 
 Rollback: route traffic to a previously verified revision while investigating; the additive catalog table can remain. Do not drop the new table or run a down migration on the shared database as part of a UI rollback. Do not change bank-encryption secrets. Preserve the existing open-UAT access decision.
 
 ## Build and release
+
+### 2026-10-08 user reference UI release
+
+Cloud Build `25e8a18e-cddb-4137-a347-e441d7f80a85` succeeded. Gateway tag `uat-20261008-reference-ui`, digest `sha256:3cbda3086656cf59d97dcb53fae91f29a7430882811f08a142a037c73aaa66b7`. Cloud Run revision `cashback-uat-00007-5jw` became ready at 14:37 Asia/Taipei and receives 100% traffic. API remains on the verified `uat-20261002-review-ux` image (`sha256:0a9ea22394477e94af34663dc5a897bd0e8d74a629b26ea49a680617598b52d7`); no migration, secret, access policy or database configuration change was required.
+
+New independent routes: `/reference/` (26Q1 public design), `/admin/reference/` (Benamic report design), and `/compare/` (four version links). Original `/` and `/admin/` applications and styles are retained. The public reference entry selects the existing Q1 simulation and stores the chosen campaign/market in its hash. Both presentations use the same business APIs and records. See [scope and limitations](../../../docs/User-Reference-UI.md) and [backend feature comparison](../../../docs/Benamic-Backend-Gap-Analysis.md).
+
+Verification:
+
+- Both frontend TypeScript checks and production builds passed locally and inside Cloud Build. Reference code/CSS is lazy loaded; original public/admin CSS hashes remain `index-8JaS8b_Q.css` / `index-CNIXRhKk.css`.
+- `scripts/verify-uat-access.mjs`: eight anonymous route/API checks plus the separate admin-session authorization check passed. Built JavaScript assets load on all four application entries and the comparison hub contains all four links.
+- Browser: live Q1 campaign/products/rewards, category selection and search, FAQ navigation, development access, create/save/reload/lookup of a named synthetic `ReferenceUI Verification` draft, campaign dashboard, scoped summaries, market filter, detailed report column visibility, and existing review entry. No bank transaction or real notification was performed.
+- Cloud summary CSV downloaded successfully: one purchase-country row, EUR, one submitted claim/two items, matching the screen; metadata and operational columns remain the existing API export. The source fixture was not edited.
+- Cloud browser console errors/warnings were empty. Original routes show the current navigation and load only the original CSS; no reference stylesheet was present on them.
+- Phone-width checks returned `clientWidth = scrollWidth = 375` for public Q1 and admin detail views; tables retain their own horizontal scroll containers.
+
+Rollback: restore traffic to `cashback-uat-00006-crp`; no down migration is necessary. Cloud SQL remains running for UAT. This release updates only the gateway presentation and does not complete the feature gaps listed in the comparison document.
 
 ### 2026-10-02 claim and review usability release
 

@@ -2,17 +2,22 @@ import assert from 'node:assert/strict';
 const base = process.env.CASHBACK_API_URL;
 assert.ok(base, 'Supply the UAT URL.');
 // Deliberately send neither Authorization nor cookies: verify genuinely open UAT access.
-for (const path of ['/', '/admin/', '/health', '/api/dev-auth/session', '/api/operations/campaigns']) {
+for (const path of ['/', '/reference/', '/admin/', '/admin/reference/', '/compare/', '/health', '/api/dev-auth/session', '/api/operations/campaigns']) {
   const response = await fetch(base + path, { redirect: 'error' });
   assert.equal(response.status, 200, `Anonymous UAT entry: ${path}`);
   assert.equal(response.headers.get('www-authenticate'), null, `Unexpected password challenge: ${path}`);
-  if (path === '/' || path === '/admin/') {
+  if (['/', '/reference/', '/admin/', '/admin/reference/'].includes(path)) {
     const html = await response.text();
     const script = html.match(/<script[^>]+src="([^"]+)"/);
     assert.ok(script, `Built application script missing: ${path}`);
     const asset = await fetch(new URL(script[1], base + path), { redirect: 'error' });
     assert.equal(asset.status, 200, `Built script inaccessible: ${path}`);
     assert.match(asset.headers.get('content-type') ?? '', /javascript/);
+  }
+  if (path === '/compare/') {
+    const html = await response.text();
+    for (const href of ['/', '/reference/', '/admin/', '/admin/reference/'])
+      assert.ok(html.includes(`href="${href}"`), `Comparison entry missing: ${href}`);
   }
   console.log(`PASS anonymous entry without password ${path}`);
 }

@@ -1,5 +1,8 @@
 .git
 .uat-test
+.pnpm-store
+.gh-pages-publish
+tmp
 .env
 .env.*
 **/node_modules
@@ -11,6 +14,7 @@
 **/*.pem
 **/*.key
 **/*.log
+**/*.tsbuildinfo
 site
 docs
 graphify-out

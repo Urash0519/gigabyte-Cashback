@@ -12,6 +12,8 @@ import "./claim-form.css";
 import { ErrorNotice, useFormFeedback } from "./FormFeedback";
 import { VersionUpdateDialog } from "./VersionUpdateDialog";
 import { useLocale } from "./i18n";
+import { AorusEmailField } from "./AorusEmailField";
+import { emailVerificationMessage, useAorusEmailVerification } from "./useAorusEmailVerification";
 const steps = [
   {
     label: "Applicant",
@@ -53,6 +55,7 @@ export function ClaimForm({ claim, campaign, onSaved, onBack, successScroll = "p
     items: claim.data.items.map((item) => ({ ...item, itemId: item.itemId || crypto.randomUUID() })),
   }));
   const [current, setCurrent] = useState(claim);
+  const emailVerification = useAorusEmailVerification(current.id, draft.email);
   const [activeCampaign, setActiveCampaign] = useState(campaign);
   const [pendingVersion, setPendingVersion] = useState<ClaimVersionCheck>();
   const [checkingVersion, setCheckingVersion] = useState(
@@ -428,6 +431,13 @@ export function ClaimForm({ claim, campaign, onSaved, onBack, successScroll = "p
               onSubmit={(e) => {
                 e.preventDefault();
                 void execute(async () => {
+                  if (step === 0) {
+                    if (draft.email.trim().toLowerCase() !== draft.confirmEmail.trim().toLowerCase())
+                      throw new Error("Email confirmation must match.");
+                    const checked = await emailVerification.verify();
+                    if (!["verified", "skipped"].includes(checked.status))
+                      throw new Error(emailVerificationMessage(checked.status));
+                  }
                   if ((step === 2 || step === 4) && (overLimitCategories.length || overLimitProducts.length)) {
                     throw new Error(t(overLimitCategories.length ? "Category quantity limit exceeded." : "Product quantity limit exceeded."));
                   }
@@ -482,7 +492,8 @@ export function ClaimForm({ claim, campaign, onSaved, onBack, successScroll = "p
                   </SelectField>
                   {text("firstName", "First name", "text", true)}
                   {text("lastName", "Last name", "text", true)}
-                  {text("email", "AORUS email", "email", true)}
+                  <AorusEmailField value={draft.email} onChange={email => setDraft(previous => ({ ...previous, email }))}
+                    state={emailVerification.state} onCheck={force => { void emailVerification.verify(force); }} disabled={busy} />
                   {text("confirmEmail", "Confirm email", "email", true)}
                   {text("phone", "Mobile number", "tel", true)}
                   {text("address1", "Address", "text", true)}

@@ -1,0 +1,17 @@
+substitutions:
+  _TAG: uat-aorus
+steps:
+  - id: api
+    name: gcr.io/cloud-builders/docker
+    waitFor: ['-']
+    args: [build, -f, backend/aspnet-core/Dockerfile.api, -t, "asia-east1-docker.pkg.dev/$PROJECT_ID/cashback-uat/api:${_TAG}", backend/aspnet-core]
+  - id: gateway
+    name: gcr.io/cloud-builders/docker
+    waitFor: ['-']
+    args: [build, -f, deploy/gcp/uat/Dockerfile.gateway, -t, "asia-east1-docker.pkg.dev/$PROJECT_ID/cashback-uat/gateway:${_TAG}", .]
+images:
+  - asia-east1-docker.pkg.dev/$PROJECT_ID/cashback-uat/api:${_TAG}
+  - asia-east1-docker.pkg.dev/$PROJECT_ID/cashback-uat/gateway:${_TAG}
+timeout: 1800s
+options:
+  logging: CLOUD_LOGGING_ONLY

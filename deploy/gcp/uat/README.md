@@ -10,13 +10,17 @@ Deployed and verified **2026-09-10**. Project `side-project-platform`, account `
 | Artifact Registry | `cashback-uat` | Regional Docker images: API, migrator and combined public/admin gateway. |
 | Cloud Build | On-demand builds | `cloudbuild.yaml`; source archive uses existing `side-project-platform_cloudbuild` bucket. |
 | IAM | `cashback-uat@side-project-platform.iam.gserviceaccount.com` | Dedicated runtime. Cloud SQL Client, bucket-scoped Object Admin and access to only runtime secrets. |
-| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00013-l54`, 100% traffic. |
+| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance per revision, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00019-bim`, 100% traffic; Direct VPC egress routes outbound traffic through the reserved NAT IP. |
 | Cloud Run Job | `cashback-uat-migrator` | 1 task, 1 vCPU / 1GiB, 0 retries; successful P0 execution `cashback-uat-migrator-7bgwh`. |
 | Cloud Storage | `side-project-platform-cashback-uat-evidence` | Private ABP claim evidence; same region. Runtime Object Admin + Legacy Bucket Reader (ABP requires `storage.buckets.get` before uploading). |
 | Cloud Storage | `side-project-platform-cashback-uat-keys` | Private persistent ASP.NET Core Data Protection keys across instance restarts; runtime Object Admin. Persisted XML key verified. |
-| Secret Manager | `cashback-uat-db`, `cashback-uat-encryption` | Active database connection and bank-field encryption secrets. Runtime access is limited to these two secrets; version 1, asia-east1. |
+| Secret Manager | `cashback-uat-db`, `cashback-uat-encryption` | Active database connection and bank-field encryption secrets. Secret-scoped runtime access; version 1, asia-east1. |
+| Secret Manager (AORUS) | `cashback-uat-aorus-client-secret`, `cashback-uat-aorus-password` | Version 1, asia-east1. Runtime has secret-scoped accessor grants; values are injected only into the API container. |
 | Secret Manager (retired) | `cashback-uat-access`, `cashback-uat-htpasswd` | Previous gateway credentials retained for rollback, no longer mounted or used. Version 1 disabled after rollout; runtime htpasswd access removed. |
-| Cloud Logging / Monitoring | Existing project services | Build/run diagnostics and built-in metrics. No dedicated paid dashboard, load balancer, NAT, Redis or Kubernetes cluster. |
+| VPC / subnet | `cashback-uat-egress` | Dedicated custom VPC and `asia-east1` subnet, `10.250.0.0/26`, Private Google Access enabled. No VPC Connector or connector VMs. |
+| Cloud Router / Public NAT | `cashback-uat-egress` / `cashback-uat-nat` | Only the dedicated subnet primary range; manually allocated single reserved IPv4, dynamic ports 128-1024, NAT logging disabled. |
+| Reserved external IPv4 | `cashback-uat-egress-ip` | **`34.81.30.245`**, partner allowlist **`34.81.30.245/32`**. Keep allocated and attached to NAT while the partner allowlist is in use. |
+| Cloud Logging / Monitoring | Existing project services | Build/run diagnostics and built-in metrics. No dedicated paid dashboard, load balancer, Redis or Kubernetes cluster. |
 
 The existing `gigabyte-cashback` prototype service and unrelated project services are unchanged. No local database or personal claim data is copied to GCP.
 
@@ -70,6 +74,60 @@ Q1 version 2 only shortens the simulated summary; original conditions remain in 
 Rollback: route traffic to a previously verified revision while investigating; the additive catalog table can remain. Do not drop the new table or run a down migration on the shared database as part of a UI rollback. Do not change bank-encryption secrets. Preserve the existing open-UAT access decision.
 
 ## Build and release
+
+### Immediate frontend email membership check — 2026-11-02
+
+Revision **`cashback-uat-00019-bim`** serves 100% of UAT traffic. Cloud Build `b7c83def-ca92-4181-9fce-4d3edc044afb` built tag `uat-20261102-email-ui`. The applicant's email field checks through the authenticated backend after 600ms without input and on blur. It displays checking, found, not found and unavailable states in English/Traditional Chinese, supports retry, hides old email results immediately and cancels replaced requests. The applicant step waits for a positive result before Save and continue; Save draft remains available. Local mock mode is explicitly displayed as unavailable rather than verified and retains its existing continuation behavior. Server-side submission and supplement checks remain in place.
+
+`POST /api/operations/claims/{id}/verify-email` accepts an unsaved email only for the current applicant's editable claim. It normalizes/validates input and returns only the email and nullable `isMember`, without saving data, auditing the input, returning partner details or changing budget. See [the integration contract](../../../docs/AORUS串接/README.md).
+
+Validation: 74 backend tests (22 application, 5 domain, 47 EF/application integration), both frontend builds, and nine Chromium production-bundle UI cases passed. UI cases cover debounce/blur deduplication, delayed-response races, provider errors/retry, draft saving, continuing after verification, mobile layout, dark-theme contrast and Traditional Chinese feedback. The actual staged GCP/AORUS flow passed 11 checks, including a real browser displaying member-found/member-not-found before submission without changing the draft. The normal UAT URL passed nine access and five application/SQL/Storage checks after promotion. The synthetic claim was cancelled, its budget released and its hidden campaign archived; no payments or email delivery were created. The temporary tag was removed. Fixed egress `34.81.30.245`, revision min 0 / max 1, resources, secrets, service account, volumes and database schema are unchanged.
+
+Evidence: [frontend integration verification](../../../docs/AORUS串接/Frontend-Integration-Verification-2026-11-02.json). Browser tests use `scripts/verify-aorus-email-ui.mjs` with a Playwright installation. Set `AORUS_BROWSER_CHECK=1` when running `scripts/verify-aorus-uat.mjs` to also exercise the real frontend/backend/AORUS path. The previous verified application revision is `cashback-uat-00017-bix`.
+
+### AORUS membership verification — 2026-11-02
+
+The backend checks AORUS membership immediately after validating the saved claim email and confirmation, on both first submission and supplement resubmission. Draft saving remains available. It uses `POST /oauth/request` with form-encoded credentials, then `POST /api/eu_promotion/check_member_exist` with Bearer authorization and the exact JSON key `eu_promotion.UserEmail`. JSON is buffered with a fixed Content-Length: a controlled comparison confirmed that the legacy endpoint treats chunked JSON as an empty body (business code 2000), while the identical buffered request returns the expected 2002. Only `Success` / `1000` with a matching returned email passes. `Failed` / `2002` rejects the email; network errors, Azure 403, malformed or inconsistent replies, and other provider failures block submission without reserving budget or consuming serial numbers. Country, opaque Name, User_ID and AUID do not establish additional eligibility or identity rules. Existing operator membership review remains separate.
+
+Tokens are cached in memory per backend process. Refresh occurs on demand 60 seconds before the provider's expiry (10% early for lifetimes under 600 seconds). HTTP 401 or business code 2098, including string `Status_code`, triggers one replacement and one lookup retry. A process-wide lock shares acquisition/replacement among concurrent requests, even if a replacement has the same token text. Repeated rejection stops with a user-facing service-unavailable message. No scheduled refresh or always-running helper is needed; a cold start obtains a new token when required. Timeout is 15 seconds per provider request; credentials and token values are excluded from application logs and frontend responses. The successful live claim flow made four membership requests with only one token acquisition, confirming cache reuse. Expiry/rejection recovery was tested with simulated time/responses, without waiting eight hours for a real token to expire.
+
+`Aorus:Enabled` defaults to false for local mock development; **UAT explicitly sets it to true**. An enabled integration validates its HTTPS URL and required credentials at startup and never falls back to the local bypass after a provider failure. Set `Aorus:BaseUrl`, `ClientId`, `Username`, `ClientSecret`, and `Password` through deployment configuration/Secret Manager. Do not put secrets into source-controlled appsettings files. Missing-member and provider-unavailable messages have Traditional Chinese frontend translations. This is a membership-existence check, not proof that the applicant controls the mailbox, and does not send an OTP or email.
+
+Validation: 69 backend tests passed (22 application, 5 domain, 42 EF/application integration), including concurrent refresh, simulated expiry, one-retry limits, malformed/error responses, and draft/budget preservation. Both frontend production builds passed. Live GCP flow verification uses `scripts/verify-aorus-uat.mjs`: it creates a campaign explicitly marked `integration-test`, checks unknown/known emails and supplement resubmission, then cancels the synthetic claim and archives the hidden campaign. It does not create payments or send email. Example manual invocation:
+
+```powershell
+$env:CASHBACK_API_URL = 'https://cashback-uat-219894818230.asia-east1.run.app'
+$env:AORUS_SMOKE_REPORT = '.uat-test/aorus-release/smoke.json'
+node scripts/verify-aorus-uat.mjs
+```
+
+Build only API/gateway with `cloudbuild-aorus.yaml`; no database migration is required. Keep the fixed-egress and low-usage settings in `service.yaml` when deploying. Local credentials are excluded from Cloud Build source archives by `.gcloudignore`.
+
+Deployed revision **`cashback-uat-00017-bix`**, 100% traffic. Cloud Build `1f622369-f4f8-4af7-947d-914281726759` succeeded; tag `uat-20261102-aorus-email-r2`. API digest `sha256:51be1605e20f45875648324c11057d412cb2df247f4ed10dd2612b046e584204`; gateway digest `sha256:c97eb08b69fb113e84900abfd786c25d01fd9568eb12b7639fe11eafb40a48c2`. The actual staged claim flow passed all seven checks, and the normal UAT URL passed nine access checks plus five application/SQL/Storage checks after promotion. The synthetic claim is cancelled, its budget released, and its hidden campaign archived. The temporary revision tag was removed. Existing images/settings outside this release, database schema, minimum 0 / maximum 1 revision instance, startup CPU boost disabled, and fixed egress `34.81.30.245` are preserved. See [backend integration verification](../../../docs/AORUS串接/Backend-Integration-Verification-2026-11-02.json).
+
+For this application release, the previous verified revision is `cashback-uat-00014-nuk`. Routing traffic back to it also reverts the new membership enforcement; it retains the fixed-egress configuration. Keep the AORUS secrets and reserved IP when investigating a rollback.
+
+### Fixed outbound IP for AORUS allowlisting — 2026-11-02
+
+The user approved the low-usage fixed-egress plan. That rollout first deployed revision `cashback-uat-00014-nuk`; the AORUS membership release above supersedes that application revision. The network-only rollout preserved existing images, environment settings, secrets, service account, volumes, CPU/memory, request concurrency, timeouts, minimum 0 / maximum 1 revision instance, and disabled startup CPU boost. It did not change the frontend or business API. Cloud Run's service-level maximum remains its previous value; the revision maximum of 1 is preserved.
+
+Outbound path: Cloud Run → Direct VPC egress (`all-traffic`) → dedicated subnet → Public Cloud NAT → reserved IPv4 **`34.81.30.245`**. The public web/API hostname is unchanged.
+
+Provide the AORUS team **`34.81.30.245/32`** as the source IPv4 for HTTPS / TCP 443 requests to their token and membership endpoints. After the partner reported completing allowlisting, a GCP retest passed on **2026-11-02 at 14:58 Asia/Taipei**: token HTTP 200 (`bearer`, `expires_in=28799`), existing member HTTP 200 / `Success` / `1000`, and nonexistent member HTTP 200 / `Failed` / `2002` with `Result=null`. Two IP echo services confirmed source `34.81.30.245` in the same one-off Cloud Run job, using the UAT service's VPC/subnet/NAT. This verifies direct API access from the UAT network; application business-flow integration was not exercised. See [GCP AORUS verification](../../../docs/AORUS串接/GCP-API-Verification-2026-11-02-145802.json). The job and its temporary Secret Manager credential bundle were deleted after the test; the UAT service specification and traffic remained unchanged. Earlier local API-document tests are recorded under `docs/AORUS串接/`.
+
+Verification: two separate short-lived Cloud Run job executions each checked two independent public IP echo services; all four observations matched the reserved IP. The second execution also verified access to both existing private Storage buckets. A tagged revision passed nine anonymous-entry/session checks and five application checks, including PostgreSQL reads and downloading an existing 2,668,270-byte evidence file. The same checks passed again through the normal UAT URL after promotion. The temporary traffic tag and verification job were removed; no scheduler, connector or permanently running helper was added. Business records were read without creating or changing campaigns or claims.
+
+Evidence: [fixed-egress verification](static-egress-verification-2026-11-02.json). Network provisioning is reproducible with [configure-static-egress.ps1](configure-static-egress.ps1); by default it provisions/verifies the network only. `-ApplyService` also connects the service, and should be used only after validating the network. [egress-check-job.yaml](egress-check-job.yaml) can recreate the one-off verification job for a later manual check; remove the helper job after completion.
+
+Low-usage estimate: one NAT-bound IPv4 costs US$0.005/hour, approximately US$3.65 per 730-hour month, even when Cloud Run scales to zero. NAT assignment time and processed data, plus applicable internet transfer, are additional. For the user's expected 2-5 hours of monthly testing and small API traffic, plan roughly US$4-5/month in incremental networking costs, not a guaranteed cap. Existing Cloud Run/SQL/Storage charges remain separate. See [NAT pricing](https://cloud.google.com/nat/pricing). Releasing the IP can invalidate the partner allowlist; retaining an unassigned static IP can cost more than keeping it attached to NAT.
+
+Rollback of application traffic, if required:
+
+```powershell
+gcloud run services update-traffic cashback-uat --to-revisions=cashback-uat-00013-l54=100 --region=asia-east1 --project=side-project-platform --account=yoyo.chen@gigabyte.com
+```
+
+The old revision uses its previous dynamic egress. Retain the reserved IP/NAT during investigation so the partner allowlist remains reusable when the fixed-egress revision is restored.
 
 ### Reference full workflow follow-up — 2026-10-08
 

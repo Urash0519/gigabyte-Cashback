@@ -1,0 +1,51 @@
+apiVersion: run.googleapis.com/v1
+kind: Job
+metadata:
+  name: cashback-uat-egress-check
+  labels: {app: gigabyte-cashback, environment: uat, purpose: egress-verification}
+spec:
+  template:
+    metadata:
+      annotations:
+        run.googleapis.com/network-interfaces: '[{"network":"cashback-uat-egress","subnetwork":"cashback-uat-egress"}]'
+        run.googleapis.com/vpc-access-egress: all-traffic
+    spec:
+      taskCount: 1
+      parallelism: 1
+      template:
+        spec:
+          serviceAccountName: cashback-uat@side-project-platform.iam.gserviceaccount.com
+          maxRetries: 0
+          timeoutSeconds: '240'
+          containers:
+            - image: asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/gateway:uat-20261008-reference-e2e
+              command: [/bin/sh]
+              args:
+                - -ec
+                - |
+                  for endpoint in https://api.ipify.org https://checkip.amazonaws.com; do
+                    observed=''
+                    attempt=0
+                    while [ "$attempt" -lt 6 ]; do
+                      if observed=$(wget -T 20 -qO- "$endpoint"); then
+                        break
+                      fi
+                      attempt=$((attempt + 1))
+                      sleep 5
+                    done
+                    if [ "$observed" != "$EXPECTED_IP" ]; then
+                      printf 'Unexpected egress IP from %s: %s\n' "$endpoint" "$observed" >&2
+                      exit 1
+                    fi
+                    printf '{"check":"outbound_ipv4","endpoint":"%s","observed_ipv4":"%s","matches_reserved":true}\n' "$endpoint" "$observed"
+                  done
+                  token=$(wget -T 20 -qO- --header='Metadata-Flavor: Google' http://metadata.google.internal/computeMetadata/v1/instance/service-accounts/default/token | sed -n 's/.*"access_token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+                  test -n "$token"
+                  for bucket in side-project-platform-cashback-uat-keys side-project-platform-cashback-uat-evidence; do
+                    wget -T 30 -qO /tmp/storage-access --header="Authorization: Bearer $token" "https://storage.googleapis.com/storage/v1/b/$bucket/o?maxResults=1&fields=items%28name%2Csize%29"
+                    printf '{"check":"google_storage_access","bucket":"%s","passed":true}\n' "$bucket"
+                  done
+              resources:
+                limits: {cpu: '1', memory: 512Mi}
+              env:
+                - {name: EXPECTED_IP, value: '34.81.30.245'}

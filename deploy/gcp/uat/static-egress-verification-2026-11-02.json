@@ -1,0 +1,171 @@
+{
+  "verified_at": "2026-11-02T12:28:18.836741+08:00",
+  "project": "side-project-platform",
+  "region": "asia-east1",
+  "service": "cashback-uat",
+  "service_url": "https://cashback-uat-219894818230.asia-east1.run.app",
+  "public_ipv4": "34.81.30.245",
+  "allowlist_cidr": "34.81.30.245/32",
+  "partner_protocol": "HTTPS / TCP 443",
+  "previous_revision": "cashback-uat-00013-l54",
+  "active_revision": "cashback-uat-00014-nuk",
+  "traffic_percent": 100,
+  "network": "cashback-uat-egress",
+  "subnet": "cashback-uat-egress",
+  "subnet_cidr": "10.250.0.0/26",
+  "cloud_router": "cashback-uat-egress",
+  "nat_name": "cashback-uat-nat",
+  "address_resource": "cashback-uat-egress-ip",
+  "address_status": "IN_USE",
+  "nat_configuration": {
+    "effectiveTcpTimeWaitTimeoutSec": 30,
+    "enableDynamicPortAllocation": true,
+    "enableEndpointIndependentMapping": false,
+    "endpointTypes": [
+      "ENDPOINT_TYPE_VM"
+    ],
+    "maxPortsPerVm": 1024,
+    "minPortsPerVm": 128,
+    "name": "cashback-uat-nat",
+    "natIpAllocateOption": "MANUAL_ONLY",
+    "natIps": [
+      "https://www.googleapis.com/compute/v1/projects/side-project-platform/regions/asia-east1/addresses/cashback-uat-egress-ip"
+    ],
+    "sourceSubnetworkIpRangesToNat": "LIST_OF_SUBNETWORKS",
+    "subnetworks": [
+      {
+        "name": "https://www.googleapis.com/compute/v1/projects/side-project-platform/regions/asia-east1/subnetworks/cashback-uat-egress",
+        "sourceIpRangesToNat": [
+          "PRIMARY_IP_RANGE"
+        ]
+      }
+    ],
+    "type": "PUBLIC"
+  },
+  "egress": "all-traffic",
+  "revision_min_instances": 0,
+  "revision_max_instances": 1,
+  "request_concurrency": 10,
+  "timeout_seconds": 300,
+  "startup_cpu_boost": false,
+  "container_spec_unchanged": true,
+  "service_level_maximum_unchanged": true,
+  "egress_probe_executions": [
+    {
+      "execution": "cashback-uat-egress-check-zrsp4",
+      "completion_time": "2026-11-02T04:18:39.933615Z",
+      "succeeded_count": 1,
+      "checks": [
+        {
+          "check": "outbound_ipv4",
+          "endpoint": "https://checkip.amazonaws.com",
+          "matches_reserved": true,
+          "observed_ipv4": "34.81.30.245"
+        },
+        {
+          "check": "outbound_ipv4",
+          "endpoint": "https://api.ipify.org",
+          "matches_reserved": true,
+          "observed_ipv4": "34.81.30.245"
+        }
+      ]
+    },
+    {
+      "execution": "cashback-uat-egress-check-tfjlk",
+      "completion_time": "2026-11-02T04:25:05.747939Z",
+      "succeeded_count": 1,
+      "checks": [
+        {
+          "bucket": "side-project-platform-cashback-uat-evidence",
+          "check": "google_storage_access",
+          "passed": true
+        },
+        {
+          "bucket": "side-project-platform-cashback-uat-keys",
+          "check": "google_storage_access",
+          "passed": true
+        },
+        {
+          "check": "outbound_ipv4",
+          "endpoint": "https://checkip.amazonaws.com",
+          "matches_reserved": true,
+          "observed_ipv4": "34.81.30.245"
+        },
+        {
+          "check": "outbound_ipv4",
+          "endpoint": "https://api.ipify.org",
+          "matches_reserved": true,
+          "observed_ipv4": "34.81.30.245"
+        }
+      ]
+    }
+  ],
+  "anonymous_access_pass_counts": {
+    "staged": 9,
+    "after": 9
+  },
+  "application_checks": {
+    "before": {
+      "checked_at": "2026-11-02T04:22:53.328Z",
+      "base_url": "https://cashback-uat-219894818230.asia-east1.run.app",
+      "checks": [
+        "API health",
+        "Development login and session",
+        "Cloud SQL campaign read",
+        "Cloud SQL claim read",
+        "Existing Cloud Storage evidence read"
+      ],
+      "campaign_count": 2,
+      "claim_count": 10,
+      "evidence_bytes": 2668270,
+      "storage_app_check": "passed",
+      "business_data_mutations": false
+    },
+    "staged": {
+      "checked_at": "2026-11-02T04:24:37.300Z",
+      "base_url": "https://static-egress-check---cashback-uat-rt4ls6lrna-de.a.run.app",
+      "checks": [
+        "API health",
+        "Development login and session",
+        "Cloud SQL campaign read",
+        "Cloud SQL claim read",
+        "Existing Cloud Storage evidence read"
+      ],
+      "campaign_count": 2,
+      "claim_count": 10,
+      "evidence_bytes": 2668270,
+      "storage_app_check": "passed",
+      "business_data_mutations": false
+    },
+    "after": {
+      "checked_at": "2026-11-02T04:26:36.559Z",
+      "base_url": "https://cashback-uat-219894818230.asia-east1.run.app",
+      "checks": [
+        "API health",
+        "Development login and session",
+        "Cloud SQL campaign read",
+        "Cloud SQL claim read",
+        "Existing Cloud Storage evidence read"
+      ],
+      "campaign_count": 2,
+      "claim_count": 10,
+      "evidence_bytes": 2668270,
+      "storage_app_check": "passed",
+      "business_data_mutations": false
+    }
+  },
+  "temporary_revision_tag_removed": true,
+  "temporary_verification_job_removed": true,
+  "scheduled_helpers_created": false,
+  "aorus_allowlist_status": "Pending partner action; no successful AORUS request from GCP is claimed.",
+  "aorus_pending_endpoints": [
+    "/oauth/request",
+    "/api/eu_promotion/check_member_exist"
+  ],
+  "cost_estimate_usd": {
+    "bound_ipv4_per_hour": 0.005,
+    "bound_ipv4_per_730_hour_month": 3.65,
+    "incremental_low_usage_monthly_budget": "approximately 4-5; excludes existing app/SQL/Storage and tax; actual NAT assignments/time/traffic can differ"
+  },
+  "rollback_revision": "cashback-uat-00013-l54"
+}

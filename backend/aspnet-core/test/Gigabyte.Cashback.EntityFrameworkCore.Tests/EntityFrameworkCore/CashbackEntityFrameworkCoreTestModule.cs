@@ -12,6 +12,8 @@ using Volo.Abp.Uow;
 using Volo.Abp.BlobStoring;
 using Gigabyte.Cashback.Files;
 using NSubstitute;
+using Gigabyte.Cashback.Aorus;
+using System.Threading;
 
 namespace Gigabyte.Cashback.EntityFrameworkCore;
 
@@ -44,6 +46,10 @@ public class CashbackEntityFrameworkCoreTestModule : AbpModule
         context.Services.AddAlwaysDisableUnitOfWorkTransaction();
         // Evidence transport is isolated; application validation and file metadata use real code / EF.
         context.Services.AddSingleton(Substitute.For<IBlobContainer<ClaimEvidenceContainer>>());
+        var members = Substitute.For<IAorusMemberClient>();
+        members.IsEnabled.Returns(true);
+        members.ExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(true);
+        context.Services.AddSingleton(members);
 
         ConfigureInMemorySqlite(context.Services);
     }

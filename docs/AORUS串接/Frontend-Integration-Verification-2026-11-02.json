@@ -1,0 +1,154 @@
+{
+  "verified_at": "2026-11-02T16:21:19.805569+08:00",
+  "timezone": "Asia/Taipei",
+  "project": "side-project-platform",
+  "region": "asia-east1",
+  "service": "cashback-uat",
+  "service_url": "https://cashback-uat-219894818230.asia-east1.run.app",
+  "previous_revision": "cashback-uat-00017-bix",
+  "active_revision": "cashback-uat-00019-bim",
+  "traffic_percent": 100,
+  "build": {
+    "id": "b7c83def-ca92-4181-9fce-4d3edc044afb",
+    "images": [
+      {
+        "name": "asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/api:uat-20261102-email-ui",
+        "digest": "sha256:35c9118bb5df244186e5db77e392e2b4efc1304d2e801c0bfbcadbffbeba984a"
+      },
+      {
+        "name": "asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/gateway:uat-20261102-email-ui",
+        "digest": "sha256:3af7da7ce0ecb7eb6989aaf0ddf1032cba28fd2674aeffb461c8d7502db83cfb"
+      }
+    ]
+  },
+  "early_endpoint": {
+    "method": "POST",
+    "path": "/api/operations/claims/{id}/verify-email",
+    "authentication_required": true,
+    "owner_only": true,
+    "editable_claim_only": true,
+    "request": {
+      "email": "test@gmail.com"
+    },
+    "response": {
+      "email": "test@gmail.com",
+      "isMember": true
+    },
+    "updates_claim": false,
+    "audits_email_payload": false,
+    "returns_credentials_or_member_identifiers": false,
+    "local_mock_result_is_null": true
+  },
+  "frontend": {
+    "debounce_ms": 600,
+    "checks_on_blur": true,
+    "deduplicates_pending_requests": true,
+    "aborts_replaced_requests": true,
+    "ignores_stale_results": true,
+    "inline_states": [
+      "checking",
+      "verified",
+      "not found",
+      "unavailable"
+    ],
+    "retry": true,
+    "languages": [
+      "en",
+      "zh-TW"
+    ],
+    "draft_saving_available": true,
+    "server_submit_and_supplement_checks_preserved": true
+  },
+  "backend_tests_passed": {
+    "total": 74,
+    "application": 22,
+    "domain": 5,
+    "ef_application": 47,
+    "early_endpoint_tests_repeated_after_assertion_refinement": 5
+  },
+  "frontend_builds": {
+    "public_web": "passed",
+    "admin_web": "passed"
+  },
+  "isolated_browser_verification": {
+    "verified_at": "2026-11-02T08:12:25.640Z",
+    "checks": [
+      "Debounced input and blur share one request, with checking and success feedback",
+      "Changed email clears old success; unknown member blocks continuing without saving",
+      "Draft saving remains available when the member is not found",
+      "An older delayed lookup cannot overwrite the latest email result",
+      "Provider outage shows a recoverable error and retry succeeds",
+      "Invalid or cleared email never shows an old success or calls the provider",
+      "Verified applicant can continue and the result survives wizard navigation",
+      "Email feedback fits the mobile layout",
+      "Traditional Chinese membership feedback is translated"
+    ],
+    "passed": true,
+    "mode": "production bundle with isolated API fixtures",
+    "browser": "Chromium",
+    "viewport_checks": [
+      1440,
+      375
+    ]
+  },
+  "actual_gcp_aorus_and_browser_flow": {
+    "started_at": "2026-11-02T08:17:33.499Z",
+    "base_url": "https://email-ui-check---cashback-uat-rt4ls6lrna-de.a.run.app",
+    "checks": [
+      "Synthetic campaign is hidden from public discovery",
+      "Early lookup checks unsaved emails without changing the draft or exposing credentials",
+      "Early lookup requires authentication and validates email format",
+      "Real browser shows AORUS membership results before claim submission without saving input",
+      "Unknown AORUS email blocks submission without reserving budget",
+      "Email confirmation still must match",
+      "Known AORUS email passes actual claim submission",
+      "Early lookup is restricted to editable claims",
+      "Supplement resubmission rechecks the current email and preserves budget on rejection",
+      "Corrected supplement submits without double reservation",
+      "Synthetic claim cancelled, budget released, and hidden campaign archived"
+    ],
+    "campaign_id": "3a24ad82-b5ed-5b18-74b1-384fe5b8689b",
+    "claim_id": "3a24ad82-ba38-a36f-154f-86ec724d25d0",
+    "browser_checks": [
+      "Known member shown before submission through actual GCP backend",
+      "Unknown member shown inline with aria-invalid",
+      "Lookup does not save the edited email"
+    ],
+    "passed": true,
+    "cleanup_complete": true,
+    "completed_at": "2026-11-02T08:18:02.595Z",
+    "payment_created": false
+  },
+  "access_checks_passed": {
+    "staged": 9,
+    "after": 9
+  },
+  "application_checks_after_promotion": {
+    "checked_at": "2026-11-02T08:19:17.812Z",
+    "base_url": "https://cashback-uat-219894818230.asia-east1.run.app",
+    "checks": [
+      "API health",
+      "Development login and session",
+      "Cloud SQL campaign read",
+      "Cloud SQL claim read",
+      "Existing Cloud Storage evidence read"
+    ],
+    "campaign_count": 5,
+    "claim_count": 13,
+    "evidence_bytes": 52,
+    "storage_app_check": "passed",
+    "business_data_mutations": false
+  },
+  "preserved_settings": {
+    "container_resources_env_secrets_service_account_and_volumes": true,
+    "revision_min_instances": 0,
+    "revision_max_instances": 1,
+    "startup_cpu_boost": false,
+    "fixed_egress_ipv4": "34.81.30.245",
+    "vpc_egress": "all-traffic",
+    "database_schema_unchanged": true
+  },
+  "temporary_revision_tag_removed": true,
+  "payment_created": false,
+  "conclusion_zh_TW": "前端 email 輸入停頓或離開欄位後會先向後端查詢 AORUS 會員，並顯示即時結果。已從真實瀏覽器經 GCP 後端驗證已註冊及未註冊情境，查詢不會保存 email；首次送出與補件伺服器端驗證仍保留。74 項後端測試、9 項隔離瀏覽器案例、11 項實際 GCP 流程及切換後檢查通過。新版本 00019-bim 已接收 100% 流量，低用量和固定出口維持不變。"
+}

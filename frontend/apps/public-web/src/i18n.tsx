@@ -69,6 +69,14 @@ export const translations: Record<string, string> = {
   "Complete applicant name and address.":
     "請填寫完整姓名與地址，包括城市及郵遞區號。",
   "Email confirmation must match.": "電子郵件格式須正確，且兩次輸入必須相同。",
+  "Your email will be checked for AORUS membership automatically.": "輸入完成後，將自動查詢此電子郵件是否為 AORUS 會員。",
+  "Enter a valid email address.": "請輸入有效的電子郵件地址。",
+  "Checking AORUS membership…": "正在查詢 AORUS 會員…",
+  "AORUS member found for this email.": "已查到此電子郵件的 AORUS 會員。",
+  "Member verification is unavailable in this environment.": "目前環境未提供會員查詢。",
+  "Check membership again": "重新查詢會員",
+  "No AORUS member was found for this email. Please register an AORUS account or check your email.": "查無此電子郵件的 AORUS 會員，請先註冊 AORUS 帳號或確認電子郵件是否正確。",
+  "AORUS membership verification is temporarily unavailable. Please try again later.": "AORUS 會員驗證服務暫時無法使用，請稍後再試。",
   "Select an eligible campaign market.": "請選擇活動適用的市場。",
   "Residence and purchase country must be campaign markets.":
     "居住國家與購買國家必須屬於活動適用市場。",

@@ -25,6 +25,7 @@ public partial class OperationsController(IOperationsAppService service) : AbpCo
     [DisableAuditing, HttpPost("claims/{id:guid}/apply-version")] public Task<ClaimDto> ApplyClaimVersion(Guid id, ApplyClaimVersionInput input) => service.ApplyClaimVersionAsync(id, input);
     [DisableAuditing, HttpPost("claims")] public Task<ClaimDto> CreateClaim(ClaimInput input) => service.CreateClaimAsync(input);
     [DisableAuditing, HttpPost("claims/{id:guid}/save")] public Task<ClaimDto> SaveClaim(Guid id, ClaimInput input) => service.SaveClaimAsync(id, input);
+    [DisableAuditing, HttpPost("claims/{id:guid}/verify-email")] public Task<EmailVerificationDto> VerifyClaimEmail(Guid id, EmailVerificationInput input) => service.VerifyClaimEmailAsync(id, input);
     [HttpPost("claims/{id:guid}/submit")] public Task<ClaimDto> Submit(Guid id) => service.SubmitClaimAsync(id);
     [HttpPost("claims/{id:guid}/action")] public Task<ClaimDto> ClaimAction(Guid id, ActionInput input) => service.ClaimActionAsync(id, input);
     [DisableAuditing, HttpPost("claims/{id:guid}/evidence"), RequestSizeLimit(12 * 1024 * 1024)] public Task<EvidenceDto> Evidence(Guid id, EvidenceUploadInput input) => service.UploadEvidenceAsync(id, input);

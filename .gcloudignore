@@ -13,6 +13,7 @@ tmp
 **/*.pfx
 **/*.pem
 **/*.key
+**/appsettings.secrets.json
 **/*.log
 **/*.tsbuildinfo
 site

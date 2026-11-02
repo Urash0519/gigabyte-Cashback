@@ -279,6 +279,7 @@ const post = <T>(path: string, data: unknown = {}) =>
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(data),
   });
+export type EmailVerificationResult = { email: string; isMember: boolean | null };
 export const api = {
   session: () => apiRequest<Session>("/api/dev-auth/session"),
   login: async (area: "public" | "admin") => {
@@ -313,6 +314,13 @@ export const api = {
     post<Claim>("/api/operations/claims", data),
   saveClaim: (id: string, data: ClaimInput) =>
     post<Claim>(`/api/operations/claims/${id}/save`, data),
+  verifyClaimEmail: (id: string, email: string, signal?: AbortSignal) =>
+    apiRequest<EmailVerificationResult>(`/api/operations/claims/${id}/verify-email`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ email }),
+      signal,
+    }),
   submitClaim: (id: string) =>
     post<Claim>(`/api/operations/claims/${id}/submit`),
   claimAction: (id: string, action: Action) =>

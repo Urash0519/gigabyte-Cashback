@@ -7,6 +7,9 @@ using System.Text.Json;
 using System.Security.Cryptography;
 using System.Threading.Tasks;
 using Gigabyte.Cashback.Files;
+using Gigabyte.Cashback.Aorus;
+using System.Net.Mail;
+using Volo.Abp.Threading;
 using Gigabyte.Cashback.Notifications;
 using Gigabyte.Cashback.Permissions;
 using Volo.Abp;
@@ -35,8 +38,9 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
     private readonly IRepository<NotificationOutboxMessage, Guid> notifications;
     private readonly IBlobContainer<ClaimEvidenceContainer> blobs;
     private readonly IStringEncryptionService encryption;
+    private readonly IAorusMemberClient aorusMembers;
     private static readonly JsonSerializerOptions Json = new() { PropertyNamingPolicy = JsonNamingPolicy.CamelCase, PropertyNameCaseInsensitive = true };
-    public OperationsAppService(IRepository<RuleReservation, Guid> ruleReservations, IRepository<ClaimRevision, Guid> revisions, IRepository<Campaign, Guid> campaigns, IRepository<CampaignVersion, Guid> versions, IRepository<ClaimRecord, Guid> claims, IRepository<SerialReservation, Guid> serials, IRepository<PaymentRecord, Guid> payments, IRepository<OperationEvent, Guid> events, IRepository<StoredFileRecord, Guid> files, IRepository<NotificationOutboxMessage, Guid> notifications, IBlobContainer<ClaimEvidenceContainer> blobs, IStringEncryptionService encryption)
+    public OperationsAppService(IRepository<RuleReservation, Guid> ruleReservations, IRepository<ClaimRevision, Guid> revisions, IRepository<Campaign, Guid> campaigns, IRepository<CampaignVersion, Guid> versions, IRepository<ClaimRecord, Guid> claims, IRepository<SerialReservation, Guid> serials, IRepository<PaymentRecord, Guid> payments, IRepository<OperationEvent, Guid> events, IRepository<StoredFileRecord, Guid> files, IRepository<NotificationOutboxMessage, Guid> notifications, IBlobContainer<ClaimEvidenceContainer> blobs, IStringEncryptionService encryption, IAorusMemberClient aorusMembers)
     {
         this.ruleReservations = ruleReservations;
         this.revisions = revisions;
@@ -50,6 +54,7 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
         this.notifications = notifications;
         this.blobs = blobs;
         this.encryption = encryption;
+        this.aorusMembers = aorusMembers;
     }
     private static string Encode<T>(T value) => JsonSerializer.Serialize(value, Json);
     private static T Decode<T>(string value) => JsonSerializer.Deserialize<T>(value, Json)!;
@@ -254,6 +259,8 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
     }
     private void StoreInput(ClaimRecord c, ClaimInput input)
     {
+        input.Email = (input.Email ?? "").Trim();
+        input.ConfirmEmail = (input.ConfirmEmail ?? "").Trim();
         foreach (var item in input.Items)
             if (string.IsNullOrWhiteSpace(item.ItemId)) item.ItemId = Guid.NewGuid().ToString("N");
         Require(input.Items.Select(i => i.ItemId).Distinct().Count() == input.Items.Count, "Product entries must be distinct.");
@@ -310,7 +317,9 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
         var localDate = TimeZoneInfo.ConvertTimeFromUtc(DateTime.SpecifyKind(now, DateTimeKind.Utc), TimeZoneInfo.FindSystemTimeZoneById(v.TimeZone)).Date;
         Require(d.TermsAccepted && d.PrivacyAccepted, "Terms and privacy consent are required.");
         Require(!string.IsNullOrWhiteSpace(d.FirstName) && !string.IsNullOrWhiteSpace(d.LastName) && !string.IsNullOrWhiteSpace(d.Address1) && !string.IsNullOrWhiteSpace(d.Postcode) && !string.IsNullOrWhiteSpace(d.City), "Complete applicant name and address.");
-        Require(d.Email.Contains('@') && string.Equals(d.Email, d.ConfirmEmail, StringComparison.OrdinalIgnoreCase), "Email confirmation must match.");
+        Require(MailAddress.TryCreate(d.Email, out var email) && email.Address == d.Email && string.Equals(d.Email, d.ConfirmEmail, StringComparison.OrdinalIgnoreCase), "Email confirmation must match.");
+        Require(await aorusMembers.ExistsAsync(d.Email, LazyServiceProvider.LazyGetRequiredService<ICancellationTokenProvider>().Token),
+            "No AORUS member was found for this email. Please register an AORUS account or check your email.");
         Require(v.Markets.Contains(d.Market), "Select an eligible campaign market.");
         Require(v.Markets.Contains(d.ResidenceCountry) && v.Markets.Contains(d.PurchaseCountry), "Residence and purchase country must be campaign markets.");
         Require(d.PurchaseDate.Date >= v.PurchaseStart.Date && d.PurchaseDate.Date <= v.PurchaseEnd.Date && d.PurchaseDate.Date.AddDays(v.WaitingDays) <= localDate, "Purchase date or waiting period is not eligible.");

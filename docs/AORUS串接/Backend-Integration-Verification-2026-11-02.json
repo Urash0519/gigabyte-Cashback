@@ -1,0 +1,175 @@
+{
+  "verified_at": "2026-11-02T15:38:23.683378+08:00",
+  "timezone": "Asia/Taipei",
+  "project": "side-project-platform",
+  "region": "asia-east1",
+  "service": "cashback-uat",
+  "service_url": "https://cashback-uat-219894818230.asia-east1.run.app",
+  "previous_revision": "cashback-uat-00014-nuk",
+  "active_revision": "cashback-uat-00017-bix",
+  "traffic_percent": 100,
+  "build": {
+    "id": "1f622369-f4f8-4af7-947d-914281726759",
+    "status": "SUCCESS",
+    "images": [
+      {
+        "name": "asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/api:uat-20261102-aorus-email-r2",
+        "digest": "sha256:51be1605e20f45875648324c11057d412cb2df247f4ed10dd2612b046e584204"
+      },
+      {
+        "name": "asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/gateway:uat-20261102-aorus-email-r2",
+        "digest": "sha256:c97eb08b69fb113e84900abfd786c25d01fd9568eb12b7639fe11eafb40a48c2"
+      }
+    ]
+  },
+  "membership_enforcement": {
+    "enabled": true,
+    "entry_point": "OperationsAppService.SubmitClaimAsync after saved email format/confirmation validation",
+    "first_submission": true,
+    "supplement_resubmission": true,
+    "draft_saving_available": true,
+    "mailbox_ownership_verified": false,
+    "provider_errors_block_submission": true
+  },
+  "token_policy": {
+    "grant_type": "password",
+    "cache": "per-process singleton memory",
+    "refresh": "on demand 60 seconds early, or 10% early for short lifetimes",
+    "rejection_signals": [
+      "HTTP 401",
+      "StatusCode/Status_code 2098"
+    ],
+    "maximum_refresh_and_lookup_retries": 1,
+    "concurrent_refresh_lock": true,
+    "background_refresh_job_created": false
+  },
+  "unit_and_application_tests": {
+    "unique_tests_passed": 69,
+    "application": 22,
+    "domain": 5,
+    "ef_application": 42,
+    "application_tests_rerun_after_framing_fix": 22,
+    "expiry_test_method": "simulated TimeProvider; did not wait for the actual eight-hour lifetime"
+  },
+  "frontend_builds": {
+    "public_web": "passed",
+    "admin_web": "passed"
+  },
+  "live_claim_flow": {
+    "started_at": "2026-11-02T07:33:20.629Z",
+    "base_url": "https://aorus-email-check---cashback-uat-rt4ls6lrna-de.a.run.app",
+    "checks": [
+      "Synthetic campaign is hidden from public discovery",
+      "Unknown AORUS email blocks submission without reserving budget",
+      "Email confirmation still must match",
+      "Known AORUS email passes actual claim submission",
+      "Supplement resubmission rechecks the current email and preserves budget on rejection",
+      "Corrected supplement submits without double reservation",
+      "Synthetic claim cancelled, budget released, and hidden campaign archived"
+    ],
+    "campaign_id": "3a24ad5a-4202-1d8e-3e5a-d778fac48c72",
+    "claim_id": "3a24ad5a-4608-932a-7be5-740a26e1ca97",
+    "passed": true,
+    "cleanup_complete": true,
+    "completed_at": "2026-11-02T07:33:37.719Z",
+    "payment_created": false
+  },
+  "live_provider_usage_during_flow": {
+    "token_requests": 1,
+    "token_acquisitions": 1,
+    "member_requests": 4,
+    "token_cache_reuse_confirmed": true,
+    "non_secret_log_summary": [
+      {
+        "timestamp": "2026-11-02T07:33:28.521432Z",
+        "message": "[07:33:28 INF] Start processing HTTP request POST https://aorus-southeastasia-api-testing.azurewebsites.net/oauth/request"
+      },
+      {
+        "timestamp": "2026-11-02T07:33:28.899415Z",
+        "message": "[07:33:28 INF] AORUS access token acquired; lifetime 28799 seconds."
+      },
+      {
+        "timestamp": "2026-11-02T07:33:28.901305Z",
+        "message": "[07:33:28 INF] Start processing HTTP request POST https://aorus-southeastasia-api-testing.azurewebsites.net/api/eu_promotion/check_member_exist"
+      },
+      {
+        "timestamp": "2026-11-02T07:33:31.406987Z",
+        "message": "[07:33:31 INF] Start processing HTTP request POST https://aorus-southeastasia-api-testing.azurewebsites.net/api/eu_promotion/check_member_exist"
+      },
+      {
+        "timestamp": "2026-11-02T07:33:33.138377Z",
+        "message": "[07:33:33 INF] Start processing HTTP request POST https://aorus-southeastasia-api-testing.azurewebsites.net/api/eu_promotion/check_member_exist"
+      },
+      {
+        "timestamp": "2026-11-02T07:33:34.82627Z",
+        "message": "[07:33:34 INF] Start processing HTTP request POST https://aorus-southeastasia-api-testing.azurewebsites.net/api/eu_promotion/check_member_exist"
+      }
+    ]
+  },
+  "legacy_request_framing_comparison": {
+    "probe_source": "local corporate network; separate controlled HTTP/1.1 framing comparison",
+    "observations": [
+      {
+        "transfer": "content-length",
+        "http_status": 200,
+        "business_status": "Failed",
+        "business_code": 2002,
+        "message": "Do not find the Member"
+      },
+      {
+        "transfer": "chunked",
+        "http_status": 200,
+        "business_status": "Fail",
+        "business_code": "2000",
+        "message": "傳入資料為空"
+      }
+    ],
+    "deployed_fix": "Prebuffer UTF-8 JSON with StringContent so Content-Length is supplied instead of chunked transfer"
+  },
+  "access_checks_passed": {
+    "staged": 9,
+    "after": 9
+  },
+  "application_checks_after_promotion": {
+    "checked_at": "2026-11-02T07:35:10.553Z",
+    "base_url": "https://cashback-uat-219894818230.asia-east1.run.app",
+    "checks": [
+      "API health",
+      "Development login and session",
+      "Cloud SQL campaign read",
+      "Cloud SQL claim read",
+      "Existing Cloud Storage evidence read"
+    ],
+    "campaign_count": 4,
+    "claim_count": 12,
+    "evidence_bytes": 52,
+    "storage_app_check": "passed",
+    "business_data_mutations": false
+  },
+  "preserved_deployment_settings": {
+    "revision_min_instances": 0,
+    "revision_max_instances": 1,
+    "startup_cpu_boost": false,
+    "concurrency": 10,
+    "timeout_seconds": 300,
+    "network": "cashback-uat-egress",
+    "egress": "all-traffic",
+    "fixed_egress_ipv4": "34.81.30.245",
+    "container_resources_service_account_existing_env_and_volumes_unchanged": true,
+    "database_migration_performed": false
+  },
+  "secrets": {
+    "provider": "Secret Manager",
+    "names": [
+      "cashback-uat-aorus-client-secret",
+      "cashback-uat-aorus-password"
+    ],
+    "version": "1",
+    "runtime_access": "secret-scoped",
+    "local_credential_files_removed": true,
+    "values_logged": false
+  },
+  "temporary_revision_tag_removed": true,
+  "payment_created": false,
+  "conclusion_zh_TW": "AORUS Token 與會員查詢已接入實際申請送出及補件重送，GCP 暫存端到端流程通過並切換 100% 流量至 00017-bix。四次會員查詢共用一次取得的 Token。未知會員阻止送出且不影響預算；有效會員及補件可正常送出。合成申請已取消、預算歸零並封存隱藏活動。Token 到期及失效重試以模擬時鐘／HTTP 回應測試通過。"
+}

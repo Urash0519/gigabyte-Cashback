@@ -1,0 +1,153 @@
+{
+  "started_at": "2026-11-02T14:58:02.528806+08:00",
+  "timezone": "Asia/Taipei",
+  "base_url": "https://aorus-southeastasia-api-testing.azurewebsites.net",
+  "credential_authorization": "User explicitly authorized using the PDF credentials in this chat and requested this GCP retest after partner allowlisting.",
+  "source": {
+    "platform": "Cloud Run Job",
+    "project": "side-project-platform",
+    "region": "asia-east1",
+    "execution": "cashback-uat-aorus-probe-n6xlr",
+    "network": "cashback-uat-egress",
+    "subnet": "cashback-uat-egress",
+    "egress": "all-traffic",
+    "observed_ipv4": "34.81.30.245",
+    "allowlist_cidr": "34.81.30.245/32",
+    "uses_same_network_and_nat_as_uat_service": true,
+    "application_business_flow_exercised": false
+  },
+  "request_cases": [
+    {
+      "method": "POST",
+      "path": "/oauth/request",
+      "content_type": "application/x-www-form-urlencoded",
+      "body": {
+        "grant_type": "password",
+        "client_id": "1",
+        "client_secret": "[REDACTED]",
+        "username": "eu_promotion@owin.com",
+        "password": "[REDACTED]"
+      },
+      "verification_check": "token"
+    },
+    {
+      "method": "POST",
+      "path": "/api/eu_promotion/check_member_exist",
+      "content_type": "application/json",
+      "authorization": "Bearer [REDACTED]",
+      "body": {
+        "eu_promotion": {
+          "UserEmail": "test@gmail.com"
+        }
+      },
+      "verification_check": "member_found"
+    },
+    {
+      "method": "POST",
+      "path": "/api/eu_promotion/check_member_exist",
+      "content_type": "application/json",
+      "authorization": "Bearer [REDACTED]",
+      "body": {
+        "eu_promotion": {
+          "UserEmail": "aorus-api-verification-20261030@example.invalid"
+        }
+      },
+      "verification_check": "member_not_found"
+    }
+  ],
+  "checks": [
+    {
+      "timestamp_utc": "2026-11-02T06:58:02.528806Z",
+      "check": "probe_started",
+      "time_utc": "2026-11-02T06:58:02Z",
+      "transport": "curl_https_certificate_verification_enabled"
+    },
+    {
+      "timestamp_utc": "2026-11-02T06:58:05.540407Z",
+      "check": "outbound_ipv4",
+      "endpoint": "https://api.ipify.org",
+      "matches_reserved": true,
+      "observed_ipv4": "34.81.30.245"
+    },
+    {
+      "timestamp_utc": "2026-11-02T06:58:05.785730Z",
+      "check": "outbound_ipv4",
+      "endpoint": "https://checkip.amazonaws.com",
+      "matches_reserved": true,
+      "observed_ipv4": "34.81.30.245"
+    },
+    {
+      "timestamp_utc": "2026-11-02T06:58:06.039690Z",
+      "access_token_logged": false,
+      "access_token_present": true,
+      "check": "token",
+      "expires_in": 28799,
+      "http_status": 200,
+      "passed": true,
+      "path": "/oauth/request",
+      "token_type": "bearer"
+    },
+    {
+      "timestamp_utc": "2026-11-02T06:58:07.312336Z",
+      "auid_present": true,
+      "check": "member_found",
+      "country_matches_TW": true,
+      "email_matches_test_fixture": true,
+      "expected_message": "Check Member Exist",
+      "expected_status": "Success",
+      "expected_status_code": 1000,
+      "http_status": 200,
+      "name_matches_previous_local_test": true,
+      "name_present": true,
+      "passed": true,
+      "path": "/api/eu_promotion/check_member_exist",
+      "personal_fields_logged": false,
+      "user_id_present": true
+    },
+    {
+      "timestamp_utc": "2026-11-02T06:58:08.901711Z",
+      "check": "member_not_found",
+      "expected_message": "Do not find the Member",
+      "expected_status": "Failed",
+      "expected_status_code": 2002,
+      "http_status": 200,
+      "passed": true,
+      "path": "/api/eu_promotion/check_member_exist",
+      "result_is_null": true
+    },
+    {
+      "timestamp_utc": "2026-11-02T06:58:08.902070Z",
+      "business_data_mutations": false,
+      "check": "probe_completed",
+      "passed": true,
+      "time_utc": "2026-11-02T06:58:08Z"
+    }
+  ],
+  "evidence_method": "The probe compared API response fields against expected values in the container and logged only assertions and non-secret token metadata. No raw token or raw member response was logged. expected_* values are verified when passed=true.",
+  "execution": {
+    "succeeded_count": 1,
+    "completion_time_utc": "2026-11-02T06:58:11.416515Z"
+  },
+  "cleanup": {
+    "job_removed": true,
+    "temporary_secret_removed": true,
+    "local_credential_file_absent": true,
+    "completed_at": "2026-11-02T06:59:32.6452877+00:00"
+  },
+  "service_after": {
+    "revision": "cashback-uat-00014-nuk",
+    "traffic_percent": 100,
+    "revision_min_instances": 0,
+    "revision_max_instances": 1,
+    "service_spec_and_traffic_unchanged": true
+  },
+  "conclusion_zh_TW": "從 GCP asia-east1、與 UAT 相同的 VPC／NAT 固定出口 34.81.30.245 實測成功。Token HTTP 200，bearer，有效期 28799 秒；既有測試會員 HTTP 200、Success／1000；不存在會員 HTTP 200、Failed／2002、Result=null。固定來源 IP 可正常呼叫兩支 API，未遇到先前的 403。Name 與先前公司內網測試一致，仍非文件範例的 Test。",
+  "redactions": [
+    "password",
+    "client_secret",
+    "access_token",
+    "Name",
+    "User_ID",
+    "AUID"
+  ]
+}

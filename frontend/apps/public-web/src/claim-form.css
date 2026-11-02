@@ -315,3 +315,8 @@
     grid-template-columns: 1fr;
   }
 }
+.aorus-email-field { min-width: 0; }
+.aorus-email-result { margin: 6px 0 0; font-size: 0.875rem; line-height: 1.5; color: #555; }
+.aorus-email-verified { color: #17633b; }
+.aorus-email-not-found, .aorus-email-invalid, .aorus-email-unavailable { color: #a12525; }
+.aorus-email-retry { margin-top: 8px; font-size: 0.875rem; }

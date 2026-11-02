@@ -16,6 +16,9 @@ using System.IO.Compression;
 using System.Text.Json;
 using System.Security.Cryptography;
 using Gigabyte.Cashback.Notifications;
+using Gigabyte.Cashback.Aorus;
+using NSubstitute;
+using System.Threading;
 
 namespace Gigabyte.Cashback.EntityFrameworkCore;
 
@@ -111,6 +114,106 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
             await WithUnitOfWorkAsync(() => _service.ClaimActionAsync(id, new() { Action = "check", Value = check, Reason = "Verified" }));
         var approved = await WithUnitOfWorkAsync(() => _service.ClaimActionAsync(id, new() { Action = "approve", Reason = "All checks passed" }));
         approved.ReviewStatus.ShouldBe("Approved");
+    }
+
+    [Theory]
+    [InlineData(true)]
+    [InlineData(false)]
+    public async Task Early_email_lookup_should_check_unsaved_input_without_mutating_claim(bool isMember)
+    {
+        var campaign = await PublishedCampaignAsync();
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        var members = GetRequiredService<IAorusMemberClient>();
+        members.ExistsAsync("test@gmail.com", Arg.Any<CancellationToken>()).Returns(isMember);
+        var before = (await WithUnitOfWorkAsync(() => _service.GetClaimsAsync())).Single(x => x.Id == draft.Id);
+        var check = await WithUnitOfWorkAsync(() => _service.VerifyClaimEmailAsync(draft.Id, new() { Email = " test@gmail.com " }));
+        check.Email.ShouldBe("test@gmail.com"); check.IsMember.ShouldBe(isMember);
+        await members.Received(1).ExistsAsync("test@gmail.com", Arg.Any<CancellationToken>());
+        var after = (await WithUnitOfWorkAsync(() => _service.GetClaimsAsync())).Single(x => x.Id == draft.Id);
+        after.Data.Email.ShouldBe(draft.Data.Email);
+        after.History.Count.ShouldBe(before.History.Count);
+        after.ReviewStatus.ShouldBe("Draft");
+        (await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync(true))).Single(x => x.Id == campaign.Id).ReservedMinor.ShouldBe(0);
+    }
+
+    [Fact]
+    public async Task Early_email_lookup_should_not_claim_a_real_match_in_local_mock_mode()
+    {
+        var campaign = await PublishedCampaignAsync();
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        var members = GetRequiredService<IAorusMemberClient>();
+        members.IsEnabled.Returns(false);
+        var check = await WithUnitOfWorkAsync(() => _service.VerifyClaimEmailAsync(draft.Id, new() { Email = "test@gmail.com" }));
+        check.IsMember.ShouldBeNull();
+        await members.DidNotReceive().ExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Early_email_lookup_should_reject_other_owners_and_bad_format_before_network_access()
+    {
+        var campaign = await PublishedCampaignAsync();
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        var members = GetRequiredService<IAorusMemberClient>();
+        await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.VerifyClaimEmailAsync(draft.Id, new() { Email = "invalid" })));
+        using (GetRequiredService<ICurrentPrincipalAccessor>().Change(new ClaimsPrincipal(new ClaimsIdentity([
+            new Claim(AbpClaimTypes.UserId, Guid.NewGuid().ToString()), new Claim(AbpClaimTypes.Email, "other@example.test")], "Test"))))
+            await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.VerifyClaimEmailAsync(draft.Id, new() { Email = "test@gmail.com" })));
+        await members.DidNotReceive().ExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Early_email_lookup_should_propagate_provider_failure_without_saving_input()
+    {
+        var campaign = await PublishedCampaignAsync();
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        GetRequiredService<IAorusMemberClient>().ExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<bool>(new UserFriendlyException("AORUS temporarily unavailable")));
+        await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.VerifyClaimEmailAsync(draft.Id, new() { Email = "test@gmail.com" })));
+        var after = (await WithUnitOfWorkAsync(() => _service.GetClaimsAsync())).Single(x => x.Id == draft.Id);
+        after.Data.Email.ShouldBe(draft.Data.Email); after.ReviewStatus.ShouldBe("Draft");
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Missing_member_or_provider_failure_must_leave_draft_and_budget_unchanged(bool providerFailure)
+    {
+        var campaign = await PublishedCampaignAsync();
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        var members = GetRequiredService<IAorusMemberClient>();
+        members.ExistsAsync(Arg.Any<string>(), Arg.Any<CancellationToken>()).Returns(_ =>
+            providerFailure ? Task.FromException<bool>(new UserFriendlyException("AORUS temporarily unavailable")) : Task.FromResult(false));
+        var error = await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(draft.Id)));
+        error.Message.ShouldContain(providerFailure ? "temporarily unavailable" : "No AORUS member");
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var saved = (await _service.GetClaimsAsync()).Single(x => x.Id == draft.Id);
+            saved.ReviewStatus.ShouldBe("Draft"); saved.SubmittedAt.ShouldBeNull();
+            saved.History.ShouldNotContain(x => x.Action == "Submitted");
+            var budget = (await _service.GetCampaignsAsync(true)).Single(x => x.Id == campaign.Id);
+            budget.ReservedMinor.ShouldBe(0);
+            (await GetRequiredService<IRepository<SerialReservation, Guid>>().GetListAsync(x => x.ClaimId == draft.Id)).ShouldBeEmpty();
+        });
+    }
+
+    [Fact]
+    public async Task Supplement_resubmission_must_recheck_current_saved_email()
+    {
+        var campaign = await PublishedCampaignAsync();
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(draft.Id));
+        await WithUnitOfWorkAsync(() => _service.ClaimActionAsync(draft.Id, new() { Action = "supplement", Reason = "Confirm email" }));
+        draft = (await WithUnitOfWorkAsync(() => _service.GetClaimsAsync())).Single(x => x.Id == draft.Id);
+        draft.Data.Email = draft.Data.ConfirmEmail = "new@example.invalid";
+        draft.Data.ChangeReason = "Correct email";
+        await WithUnitOfWorkAsync(() => _service.SaveClaimAsync(draft.Id, draft.Data));
+        var members = GetRequiredService<IAorusMemberClient>();
+        members.ExistsAsync("new@example.invalid", Arg.Any<CancellationToken>()).Returns(false);
+        await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(draft.Id)));
+        await members.Received(1).ExistsAsync("new@example.invalid", Arg.Any<CancellationToken>());
+        var saved = (await WithUnitOfWorkAsync(() => _service.GetClaimsAsync())).Single(x => x.Id == draft.Id);
+        saved.ReviewStatus.ShouldBe("MoreInfoRequired");
+        (await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync(true))).Single(x => x.Id == campaign.Id).ReservedMinor.ShouldBe(1000);
     }
 
     [Fact]

@@ -11,6 +11,7 @@ using Volo.Abp.Security.Claims;
 using Xunit;
 using Microsoft.Extensions.DependencyInjection;
 using Volo.Abp.Uow;
+using Volo.Abp.Data;
 using System.IO;
 using System.IO.Compression;
 using System.Text.Json;
@@ -41,7 +42,7 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
         await WithUnitOfWorkAsync(async () => { await action(); return true; });
     }
 
-    private async Task<CampaignDto> PublishedCampaignAsync(long budget = 10000, string exclusivityGroup = "", int itemLimit = 1, int personLimit = 10, int householdLimit = 1)
+    private async Task<CampaignDto> PublishedCampaignAsync(long budget = 10000, string exclusivityGroup = "", int itemLimit = 1, int personLimit = 10, int householdLimit = 1, bool integrationFixture = false)
     {
         var today = DateTime.UtcNow.Date;
         var created = await WithUnitOfWorkAsync(() => _service.CreateCampaignAsync(new CampaignInput
@@ -50,6 +51,7 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
             PurchaseStart = today.AddDays(-30), PurchaseEnd = today.AddDays(1),
             ClaimStart = today.AddDays(-30), ClaimEnd = today.AddDays(30),
             Terms = "Terms", Privacy = "Privacy", MaxClaimsPerPerson = personLimit, MaxClaimsPerHousehold = householdLimit, MaxItemsPerCategory = itemLimit,
+            LegacyFields = integrationFixture ? new() { ["dataPurpose"] = "integration-test" } : [],
             Products = [new() { Id = "gpu", Category = "GPU", Model = "RTX", CashbackMinor = 1000, QuantityLimit = itemLimit }, new() { Id = "board", Category = "Motherboard", Model = "B860", CashbackMinor = 2000 }],
             Retailers = [new() { Id = "shop", Name = "Shop", Country = "DE" }]
         }));
@@ -341,6 +343,47 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
             ItemId = saved.Data.Items[1].ItemId, Content = [255, 216, 255, 1, 2]
         }));
         (await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(draft.Id))).ReviewStatus.ShouldBe("Submitted");
+    }
+
+    [Theory]
+    [InlineData("cancel")]
+    [InlineData("reject")]
+    public async Task Archiving_closed_test_claim_should_remove_it_from_lists_and_preserve_audit(string action)
+    {
+        var campaign = await PublishedCampaignAsync(integrationFixture: true);
+        var claim = await DraftWithEvidenceAsync(campaign.Id);
+        await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(claim.Id));
+        await WithUnitOfWorkAsync(() => _service.ClaimActionAsync(claim.Id, new() { Action = action, Reason = "Close synthetic claim" }));
+        await WithUnitOfWorkAsync(() => _service.ClaimActionAsync(claim.Id, new() { Action = "archive-test", Reason = "Remove synthetic claim from lists" }));
+        (await WithUnitOfWorkAsync(() => _service.GetClaimsAsync())).ShouldNotContain(x => x.Id == claim.Id);
+        (await WithUnitOfWorkAsync(() => _service.GetClaimsAsync(true))).ShouldNotContain(x => x.Id == claim.Id);
+        await WithUnitOfWorkAsync(async () =>
+        {
+            using (GetRequiredService<IDataFilter>().Disable<ISoftDelete>())
+            {
+                var archived = await GetRequiredService<IRepository<ClaimRecord, Guid>>().GetAsync(claim.Id);
+                archived.IsDeleted.ShouldBeTrue();
+            }
+            var history = await GetRequiredService<IRepository<OperationEvent, Guid>>().GetListAsync(x => x.TargetId == claim.Id);
+            history.ShouldContain(x => x.Action == "Submitted");
+            history.ShouldContain(x => x.Action == "TestClaimArchived");
+        });
+        (await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync(true))).Single(x => x.Id == campaign.Id).ReservedMinor.ShouldBe(0);
+    }
+
+    [Theory]
+    [InlineData(false, "Cancelled")]
+    [InlineData(true, "Draft")]
+    [InlineData(true, "Submitted")]
+    public async Task Archiving_should_reject_normal_or_unclosed_claims(bool integrationFixture, string status)
+    {
+        var campaign = await PublishedCampaignAsync(integrationFixture: integrationFixture);
+        var claim = await DraftWithEvidenceAsync(campaign.Id);
+        if (status != "Draft") await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(claim.Id));
+        if (status == "Cancelled") await WithUnitOfWorkAsync(() => _service.ClaimActionAsync(claim.Id, new() { Action = "cancel", Reason = "Close normal claim" }));
+        await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.ClaimActionAsync(claim.Id,
+            new() { Action = "archive-test", Reason = "Attempt invalid archive" })));
+        (await WithUnitOfWorkAsync(() => _service.GetClaimsAsync())).Single(x => x.Id == claim.Id).ReviewStatus.ShouldBe(status);
     }
 
     [Theory]

@@ -29,7 +29,7 @@ spec:
           resources:
             limits: {cpu: "1", memory: 256Mi}
         - name: api
-          image: asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/api:uat-20261103-exclusive-group
+          image: asia-east1-docker.pkg.dev/side-project-platform/cashback-uat/api:uat-20261103-test-claim-archive
           resources:
             limits: {cpu: "1", memory: 1Gi}
           startupProbe:

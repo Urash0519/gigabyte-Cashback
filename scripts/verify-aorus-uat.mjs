@@ -118,6 +118,9 @@ try {
       if (!['Cancelled', 'Rejected'].includes(claim.reviewStatus))
         claim = await request(`/api/operations/claims/${claim.id}/action`, { action: 'cancel', reason: 'AORUS synthetic verification completed' });
       assert.equal(claim.reviewStatus, 'Cancelled');
+      await request(`/api/operations/claims/${claim.id}/action`, { action: 'archive-test', reason: 'Remove completed AORUS test claim from lists' });
+      assert.ok(!(await request('/api/operations/claims?admin=true')).some(c => c.id === claim.id));
+      report.claim_archived = true;
     }
     if (campaign) {
       campaign = await currentCampaign();
@@ -126,7 +129,7 @@ try {
       await request(`/api/operations/campaigns/${campaign.id}/publish`, { reason: 'Archive completed synthetic AORUS verification' });
     }
     cleanupComplete = true;
-    pass('Synthetic claim cancelled, budget released, and hidden campaign archived');
+    pass('Synthetic claim cancelled and archived from lists, budget released, and hidden campaign archived');
   } finally {
     report.cleanup_complete = cleanupComplete;
     report.completed_at = new Date().toISOString();

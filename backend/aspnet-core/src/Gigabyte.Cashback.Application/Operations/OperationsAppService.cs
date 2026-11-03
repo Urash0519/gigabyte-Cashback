@@ -449,6 +449,18 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
             await Owner(c);
         else
             await Permit(CashbackPermissions.Claims.Review);
+        if (input.Action == "archive-test")
+        {
+            Require(c.ReviewStatus is "Cancelled" or "Rejected" && c.PaymentStatus == "None", "Only closed, unpaid test claims can be archived.");
+            Require(c.CampaignVersionId.HasValue, "Only integration-test claims can be archived.");
+            var snapshot = Decode<CampaignInput>((await versions.GetAsync(c.CampaignVersionId!.Value)).SnapshotJson);
+            Require(IsIntegrationTestCampaign(snapshot), "Only integration-test claims can be archived.");
+            Require(!await payments.AnyAsync(x => x.ClaimId == id) && !await serials.AnyAsync(x => x.ClaimId == id) &&
+                !await ruleReservations.AnyAsync(x => x.ClaimId == id), "Release test claim payments and reservations before archiving.");
+            await Log(id, "TestClaimArchived", input.Reason);
+            await claims.DeleteAsync(c, autoSave: true);
+            return await ClaimDto(c);
+        }
         var campaign = await campaigns.GetAsync(c.CampaignId);
         switch (input.Action)
         {

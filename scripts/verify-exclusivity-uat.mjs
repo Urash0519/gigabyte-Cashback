@@ -126,6 +126,7 @@ try {
     for (const id of claims) {
       const claim = await currentClaim(id);
       if (!['Cancelled', 'Rejected'].includes(claim.reviewStatus)) await close(id, 'cancel');
+      await close(id, 'archive-test');
     }
     for (const id of campaigns) {
       const campaign = await currentCampaign(id);
@@ -137,8 +138,11 @@ try {
       });
       await request(`/api/operations/campaigns/${id}/publish`, { reason: 'Archive completed synthetic exclusivity regression' });
     }
+    const remainingClaims = await request('/api/operations/claims?admin=true');
+    assert.ok(claims.every(id => !remainingClaims.some(c => c.id === id)));
+    report.claims_archived = true;
     report.cleanup_complete = true;
-    pass('All synthetic claims closed, budgets released, campaigns archived; no payments created');
+    pass('All synthetic claims closed and archived from lists, budgets released, campaigns archived; no payments created');
   } finally {
     report.campaign_ids = campaigns;
     report.claim_ids = claims;

@@ -16,14 +16,14 @@ Tokens are cached per backend process and refreshed on demand before expiry. HTT
 
 `test@gmail.com` is the account supplied in the API document and remains the default for automated checks. Its membership lookup passed the GCP verification on 2026-11-02.
 
-The following additional test emails were supplied by AORUS and relayed by the user on **2026-11-03**. They are available for manual and integration testing; this supplied list has not yet been individually verified by this change.
+The following additional test emails were supplied by AORUS and relayed by the user on **2026-11-03**. They are available for manual and integration testing. Verification dates and outcomes are maintained below.
 
 | Test email | Source / status |
 |---|---|
 | vincent.chu@gigabyte.com | AORUS-provided; awaiting individual verification |
 | peter.nien@gigabyte.com | AORUS-provided; awaiting individual verification |
 | yang71030@gmail.com | AORUS-provided; awaiting individual verification |
-| yang71030@yahoo.com | AORUS-provided; awaiting individual verification |
+| yang71030@yahoo.com | 2026-11-03 GCP verified: member found; `Result.Name` is an empty string, so the review UI displays “Name not returned” |
 | lyana.lee.gigabyte@gmail.com | AORUS-provided; awaiting individual verification |
 | cl4rmp404@gmail.com | AORUS-provided; awaiting individual verification |
 | lyanalee1210@gmail.com | AORUS-provided; awaiting individual verification |
@@ -62,6 +62,7 @@ The applicant field checks after 600ms without input and on blur, shares duplica
 - `dotnet test backend/aspnet-core/Gigabyte.Cashback.slnx`
 - Build both frontend applications.
 - `node scripts/verify-aorus-email-ui.mjs`: production-bundle browser tests using isolated API fixtures; requires the `playwright` module. `PLAYWRIGHT_MODULE` and `PLAYWRIGHT_EXECUTABLE_PATH` can select an existing installation.
+- `node scripts/verify-claims-review-ui.mjs`: thirteen isolated browser checks for both admin presentations at 1920/1440/768/375px, member-reference states/retry, Chinese labels and stale-response protection. Creates no UAT claims. See [browser verification](Reviewer-Name-UI-Verification-2026-11-03.json).
 - `CASHBACK_API_URL=<uat-url> AORUS_BROWSER_CHECK=1 node scripts/verify-aorus-uat.mjs`: actual GCP/AORUS flow, including early checks and live browser feedback. It creates a hidden synthetic campaign, cancels its claim, releases budget and archives the campaign after testing; no payment is created. PowerShell users should set these environment variables with `$env:` first.
 
 The JSON verification records in this folder redact credentials/tokens and member identifiers. Deployment configuration and current release details are in [the GCP UAT record](../../deploy/gcp/uat/README.md).

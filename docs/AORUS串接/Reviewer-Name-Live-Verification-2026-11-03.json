@@ -1,0 +1,44 @@
+{
+  "verified_at": "2026-11-03T03:49:34.172Z",
+  "base_url": "https://cashback-uat-219894818230.asia-east1.run.app",
+  "claim_id": "3a24b146-86a7-096d-80d8-cb5fbb0feb82",
+  "email": "yang71030@yahoo.com",
+  "member_found": true,
+  "returned_name_present": false,
+  "returned_name_length": 0,
+  "returned_name_redacted": true,
+  "aorus_transient_retries": 0,
+  "checks": [
+    "Anonymous callers cannot access member names",
+    "Applicant-only sessions cannot access reviewer member names",
+    "Reviewer receives the saved-email member name, UTC time and no-store response without provider IDs",
+    "Live Claims screen displays the returned AORUS name or an explicit missing-name state",
+    "Live 1440px: current claim reference stays inside its card without page overflow",
+    "Live 375px: current claim reference stays inside its card without page overflow",
+    "Existing claims, review history, saved inputs and amounts are unchanged",
+    "All fifteen archived test claims remain absent; no new claims created"
+  ],
+  "local_backend_tests_passed": 93,
+  "isolated_browser_checks_passed": 13,
+  "existing_claim_count": 11,
+  "claims_unchanged": true,
+  "new_claims_created": 0,
+  "archived_test_claims_visible": 0,
+  "passed": true,
+  "verified_at_taipei": "2026-11-03 11:51:06",
+  "source_commit": "23fc1dc",
+  "build_id": "bf70c627-9bec-46be-8c14-735a2f63f299",
+  "api_digest": "sha256:f1b99243bf3813ef533a1a8ed2e18ce4deeab281ba1795d4e42162fa187fa118",
+  "gateway_digest": "sha256:bb18ff4ccbe1c601f821220b61c10a698c0f70c4cabd47376b297c9f1adcc5c8",
+  "revision": "cashback-uat-00025-jey",
+  "traffic": [
+    {
+      "percent": 100,
+      "revisionName": "cashback-uat-00025-jey"
+    }
+  ],
+  "post_promotion_access_checks_passed": 9,
+  "runtime_settings_preserved": true,
+  "rollback_revision": "cashback-uat-00023-buk",
+  "provider_name_observation": "The verified member lookup for this supplied test email returned an empty Name string; the UI explicitly displays Name not returned."
+}

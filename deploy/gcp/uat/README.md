@@ -10,7 +10,7 @@ Deployed and verified **2026-09-10**. Project `side-project-platform`, account `
 | Artifact Registry | `cashback-uat` | Regional Docker images: API, migrator and combined public/admin gateway. |
 | Cloud Build | On-demand builds | `cloudbuild.yaml`; source archive uses existing `side-project-platform_cloudbuild` bucket. |
 | IAM | `cashback-uat@side-project-platform.iam.gserviceaccount.com` | Dedicated runtime. Cloud SQL Client, bucket-scoped Object Admin and access to only runtime secrets. |
-| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance per revision, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00023-buk`, 100% traffic; Direct VPC egress routes outbound traffic through the reserved NAT IP. |
+| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance per revision, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00025-jey`, 100% traffic; Direct VPC egress routes outbound traffic through the reserved NAT IP. |
 | Cloud Run Job | `cashback-uat-migrator` | 1 task, 1 vCPU / 1GiB, 0 retries; successful P0 execution `cashback-uat-migrator-7bgwh`. |
 | Cloud Storage | `side-project-platform-cashback-uat-evidence` | Private ABP claim evidence; same region. Runtime Object Admin + Legacy Bucket Reader (ABP requires `storage.buckets.get` before uploading). |
 | Cloud Storage | `side-project-platform-cashback-uat-keys` | Private persistent ASP.NET Core Data Protection keys across instance restarts; runtime Object Admin. Persisted XML key verified. |
@@ -74,6 +74,16 @@ Q1 version 2 only shortens the simulated summary; original conditions remain in 
 Rollback: route traffic to a previously verified revision while investigating; the additive catalog table can remain. Do not drop the new table or run a down migration on the shared database as part of a UI rollback. Do not change bank-encryption secrets. Preserve the existing open-UAT access decision.
 
 ## Build and release
+
+### Claims overflow and reviewer AORUS name reference — 2026-11-03
+
+Commit `23fc1dc` contains long claim references inside their metric cards and constrains the review grid so long content cannot widen the page. Both admin presentations use the same corrected Claims component. A reviewer-only `POST /api/operations/claims/{id}/aorus-member` reads the claim's saved email and returns the AORUS name, membership status and UTC lookup time without changing the claim or required checks. Loading, errors/retry, disabled, missing-member and missing-name states are translated. Provider names are returned as supplied; applicant email-verification responses do not expose them.
+
+Cloud Build `bf70c627-9bec-46be-8c14-735a2f63f299` succeeded with tag `uat-20261103-review-name`. API digest `sha256:f1b99243bf3813ef533a1a8ed2e18ce4deeab281ba1795d4e42162fa187fa118`; gateway digest `sha256:bb18ff4ccbe1c601f821220b61c10a698c0f70c4cabd47376b297c9f1adcc5c8`. Revision **`cashback-uat-00025-jey`** serves 100% traffic. API/gateway images are the only runtime specification changes; secrets, service account, volumes, resources, scaling, fixed egress and database settings were compared and preserved. No migration was needed. Previous verified revision `cashback-uat-00023-buk` remains the rollback target; the temporary tag was removed.
+
+Validation: 93 backend tests, both production frontend builds and thirteen isolated Chromium checks passed. Both admin presentations were tested at 1920/1440/768/375px, including long names, retry, Chinese labels and stale-response protection. Eight actual GCP/API/browser checks passed on the normal UAT URL after promotion, including anonymous/applicant denial, exact response fields/no-store, live desktop/mobile layout and unchanged claims/history. Nine access checks also passed. No new claim was created or submitted, and all fifteen archived test claims remain hidden.
+
+The supplied test member `yang71030@yahoo.com` was found, but AORUS returned an empty `Name` string. The review screen explicitly shows “Name not returned”; it does not substitute the applicant's name. The user-supplied list of nine additional test emails and per-address verification status is maintained in [AORUS integration notes](../../../docs/AORUS串接/README.md). See [isolated browser evidence](../../../docs/AORUS串接/Reviewer-Name-UI-Verification-2026-11-03.json) and [live/deployment evidence](../../../docs/AORUS串接/Reviewer-Name-Live-Verification-2026-11-03.json).
 
 ### Remove completed synthetic claims from management lists — 2026-11-03
 

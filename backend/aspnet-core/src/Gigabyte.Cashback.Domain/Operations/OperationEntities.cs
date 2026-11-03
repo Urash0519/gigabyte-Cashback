@@ -75,6 +75,7 @@ public class RuleReservation : CreationAuditedAggregateRoot<Guid>
         ClaimId = claimId;
         ScopeKey = scopeKey;
     }
+    public void TransferTo(Guid claimId) => ClaimId = claimId;
 }
 
 [DisableAuditing]

@@ -346,13 +346,13 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
         Require(existing.Count(x => x.OwnerId == c.OwnerId || string.Equals(Decode<ClaimInput>(x.DataJson).Email, d.Email, StringComparison.OrdinalIgnoreCase)) < v.MaxClaimsPerPerson, "Applicant claim limit exceeded.");
         var householdLimit = v.LegacyFields.TryGetValue("maxClaimsPerHousehold", out var householdValue) && int.TryParse(householdValue, out var configuredHousehold) ? configuredHousehold : v.MaxClaimsPerHousehold;
         Require(householdLimit > 0 && existing.Count(x => Household(Decode<ClaimInput>(x.DataJson)) == Household(d)) < householdLimit, "Household claim limit exceeded.");
-        var group = v.LegacyFields.GetValueOrDefault("exclusivityGroup", v.ExclusivityGroup);
+        var group = ExclusivityGroup(v);
         if (!string.IsNullOrWhiteSpace(group))
         {
             foreach (var other in existingAll.Where(x => x.CampaignId != c.CampaignId && (x.OwnerId == c.OwnerId || string.Equals(Decode<ClaimInput>(x.DataJson).Email, d.Email, StringComparison.OrdinalIgnoreCase))))
             {
                 var otherRules = Decode<CampaignInput>((await versions.GetAsync(other.CampaignVersionId!.Value)).SnapshotJson);
-                Require(otherRules.LegacyFields.GetValueOrDefault("exclusivityGroup", otherRules.ExclusivityGroup) != group, "An application already exists in an exclusive campaign group.");
+                Require(ExclusivityGroup(otherRules) != group, "An application already exists in an exclusive campaign group.");
             }
         }
         foreach (var item in d.Items)
@@ -384,18 +384,16 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
             await serials.DeleteAsync(old);
         foreach (var sn in desiredSerials.Where(sn => ownedSerials.All(x => x.SerialNumber != sn)))
             await serials.InsertAsync(new SerialReservation(GuidGenerator.Create(), c.Id, sn));
-        var desiredScopes = string.IsNullOrWhiteSpace(group) ? new HashSet<string>() : new[]
-        {
-            "exclusive-owner:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(group.Trim().ToUpperInvariant() + "|" + c.OwnerId))),
-            "exclusive-email:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(group.Trim().ToUpperInvariant() + "|" + d.Email.Trim().ToUpperInvariant())))
-        }.ToHashSet();
+        var desiredScopes = ExclusivityScopes(c, d, group);
         var ownedScopes = await ruleReservations.GetListAsync(x => x.ClaimId == c.Id);
-        foreach (var old in ownedScopes.Where(x => !desiredScopes.Contains(x.ScopeKey)))
-            await ruleReservations.DeleteAsync(old);
+        await ReleaseExclusivityScopesAsync(c, ownedScopes.Where(x => !desiredScopes.Contains(x.ScopeKey)));
         foreach (var key in desiredScopes.Where(key => ownedScopes.All(x => x.ScopeKey != key)))
         {
-            Require(!await ruleReservations.AnyAsync(x => x.ScopeKey == key && x.ClaimId != c.Id), "An exclusive campaign application already reserves this applicant.");
-            await ruleReservations.InsertAsync(new RuleReservation(GuidGenerator.Create(), c.Id, key));
+            var reserved = await ruleReservations.FindAsync(x => x.ScopeKey == key);
+            if (reserved == null)
+                await ruleReservations.InsertAsync(new RuleReservation(GuidGenerator.Create(), c.Id, key));
+            else
+                Require((await claims.GetAsync(reserved.ClaimId)).CampaignId == c.CampaignId, "An exclusive campaign application already reserves this applicant.");
         }
         c.AmountMinor = calculatedAmount;
         await campaigns.UpdateAsync(campaign);
@@ -405,6 +403,41 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
         await Log(id, "Submitted", "Terms " + v.TermsVersion + "; privacy " + v.LegacyFields.GetValueOrDefault("privacyVersion", v.TermsVersion) + " accepted; marketing=" + d.MarketingAccepted, c.AmountMinor);
         await Notify(c, "Claim received " + c.Reference);
         return await ClaimDto(c);
+    }
+    private static string ExclusivityGroup(CampaignInput rules) =>
+        (rules.LegacyFields.GetValueOrDefault("exclusivityGroup", rules.ExclusivityGroup) ?? "").Trim().ToUpperInvariant();
+
+    private static HashSet<string> ExclusivityScopes(ClaimRecord claim, ClaimInput data, string group) =>
+        string.IsNullOrWhiteSpace(group) ? [] : new[]
+        {
+            "exclusive-owner:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(group + "|" + claim.OwnerId))),
+            "exclusive-email:" + Convert.ToHexString(SHA256.HashData(Encoding.UTF8.GetBytes(group + "|" + data.Email.Trim().ToUpperInvariant())))
+        }.ToHashSet();
+
+    private async Task ReleaseExclusivityScopesAsync(ClaimRecord claim, IEnumerable<RuleReservation> reservations)
+    {
+        var owned = reservations.ToList();
+        if (owned.Count == 0) return;
+        var remaining = await claims.GetListAsync(x => x.CampaignId == claim.CampaignId && x.Id != claim.Id &&
+            x.ReviewStatus != "Draft" && x.ReviewStatus != "Rejected" && x.ReviewStatus != "Cancelled");
+        var scopes = new Dictionary<Guid, HashSet<string>>();
+        foreach (var other in remaining)
+        {
+            var rules = Decode<CampaignInput>((await versions.GetAsync(other.CampaignVersionId!.Value)).SnapshotJson);
+            scopes[other.Id] = ExclusivityScopes(other, Decode<ClaimInput>(other.DataJson), ExclusivityGroup(rules));
+        }
+        // One unique scope protects the whole campaign. Keep it until its last matching claim closes.
+        foreach (var reservation in owned)
+        {
+            var successor = remaining.FirstOrDefault(x => scopes[x.Id].Contains(reservation.ScopeKey));
+            if (successor == null)
+                await ruleReservations.DeleteAsync(reservation);
+            else
+            {
+                reservation.TransferTo(successor.Id);
+                await ruleReservations.UpdateAsync(reservation);
+            }
+        }
     }
     [UnitOfWork(isTransactional: true)]
     public async Task<ClaimDto> ClaimActionAsync(Guid id, ActionInput input)
@@ -440,7 +473,7 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
                 campaign.Release(c.AmountMinor, false);
                 c.ReviewStatus = "Rejected";
                 await serials.DeleteAsync(x => x.ClaimId == id);
-                await ruleReservations.DeleteAsync(x => x.ClaimId == id);
+                await ReleaseExclusivityScopesAsync(c, await ruleReservations.GetListAsync(x => x.ClaimId == id));
                 await Log(campaign.Id, "BudgetReleased", c.Reference, c.AmountMinor);
                 break;
             case "supplement":
@@ -469,7 +502,7 @@ public partial class OperationsAppService : CashbackAppService, IOperationsAppSe
                 }
                 c.ReviewStatus = "Cancelled";
                 await serials.DeleteAsync(x => x.ClaimId == id);
-                await ruleReservations.DeleteAsync(x => x.ClaimId == id);
+                await ReleaseExclusivityScopesAsync(c, await ruleReservations.GetListAsync(x => x.ClaimId == id));
                 break;
             case "message":
                 break;

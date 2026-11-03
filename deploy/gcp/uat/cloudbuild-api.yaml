@@ -1,0 +1,10 @@
+substitutions:
+  _TAG: uat-api
+steps:
+  - name: gcr.io/cloud-builders/docker
+    args: [build, -f, backend/aspnet-core/Dockerfile.api, -t, "asia-east1-docker.pkg.dev/$PROJECT_ID/cashback-uat/api:${_TAG}", backend/aspnet-core]
+images:
+  - asia-east1-docker.pkg.dev/$PROJECT_ID/cashback-uat/api:${_TAG}
+timeout: 1800s
+options:
+  logging: CLOUD_LOGGING_ONLY

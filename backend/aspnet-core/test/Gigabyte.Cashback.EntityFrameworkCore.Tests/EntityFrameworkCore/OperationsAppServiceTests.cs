@@ -41,7 +41,7 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
         await WithUnitOfWorkAsync(async () => { await action(); return true; });
     }
 
-    private async Task<CampaignDto> PublishedCampaignAsync(long budget = 10000, string exclusivityGroup = "", int itemLimit = 1)
+    private async Task<CampaignDto> PublishedCampaignAsync(long budget = 10000, string exclusivityGroup = "", int itemLimit = 1, int personLimit = 10, int householdLimit = 1)
     {
         var today = DateTime.UtcNow.Date;
         var created = await WithUnitOfWorkAsync(() => _service.CreateCampaignAsync(new CampaignInput
@@ -49,7 +49,7 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
             Name = "Integration " + Guid.NewGuid(), BudgetMinor = budget, ExclusivityGroup = exclusivityGroup,
             PurchaseStart = today.AddDays(-30), PurchaseEnd = today.AddDays(1),
             ClaimStart = today.AddDays(-30), ClaimEnd = today.AddDays(30),
-            Terms = "Terms", Privacy = "Privacy", MaxClaimsPerPerson = 10, MaxItemsPerCategory = itemLimit,
+            Terms = "Terms", Privacy = "Privacy", MaxClaimsPerPerson = personLimit, MaxClaimsPerHousehold = householdLimit, MaxItemsPerCategory = itemLimit,
             Products = [new() { Id = "gpu", Category = "GPU", Model = "RTX", CashbackMinor = 1000, QuantityLimit = itemLimit }, new() { Id = "board", Category = "Motherboard", Model = "B860", CashbackMinor = 2000 }],
             Retailers = [new() { Id = "shop", Name = "Shop", Country = "DE" }]
         }));
@@ -343,12 +343,81 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
         (await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(draft.Id))).ReviewStatus.ShouldBe("Submitted");
     }
 
+    [Theory]
+    [InlineData(2, 3, "Applicant claim limit exceeded.")]
+    [InlineData(3, 2, "Household claim limit exceeded.")]
+    public async Task Exclusive_group_should_allow_same_campaign_claims_up_to_configured_limits(int personLimit, int householdLimit, string message)
+    {
+        var campaign = await PublishedCampaignAsync(exclusivityGroup: Guid.NewGuid().ToString("N"), personLimit: personLimit, householdLimit: householdLimit);
+        var first = await DraftWithEvidenceAsync(campaign.Id);
+        var second = await DraftWithEvidenceAsync(campaign.Id);
+        var third = await DraftWithEvidenceAsync(campaign.Id);
+        (await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(first.Id))).ReviewStatus.ShouldBe("Submitted");
+        (await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(second.Id))).ReviewStatus.ShouldBe("Submitted");
+        var error = await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(third.Id)));
+        error.Message.ShouldBe(message);
+        (await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync(true))).Single(x => x.Id == campaign.Id).ReservedMinor.ShouldBe(2000);
+    }
+
+    [Theory]
+    [InlineData("cancel")]
+    [InlineData("reject")]
+    public async Task Shared_exclusivity_scopes_should_remain_until_last_same_campaign_claim_closes(string action)
+    {
+        var group = Guid.NewGuid().ToString("N");
+        var campaign = await PublishedCampaignAsync(exclusivityGroup: group, householdLimit: 2);
+        var otherCampaign = await PublishedCampaignAsync(exclusivityGroup: group);
+        var first = await DraftWithEvidenceAsync(campaign.Id);
+        var second = await DraftWithEvidenceAsync(campaign.Id);
+        var other = await DraftWithEvidenceAsync(otherCampaign.Id);
+        await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(first.Id));
+        await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(second.Id));
+        await WithUnitOfWorkAsync(() => _service.ClaimActionAsync(first.Id, new() { Action = action, Reason = "Close first claim" }));
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var scopes = GetRequiredService<IRepository<RuleReservation, Guid>>();
+            (await scopes.CountAsync(x => x.ClaimId == first.Id)).ShouldBe(0);
+            (await scopes.CountAsync(x => x.ClaimId == second.Id)).ShouldBe(2);
+        });
+        await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(other.Id)));
+        await WithUnitOfWorkAsync(() => _service.ClaimActionAsync(second.Id, new() { Action = action, Reason = "Close last claim" }));
+        (await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(other.Id))).ReviewStatus.ShouldBe("Submitted");
+    }
+
     [Fact]
-    public async Task Exclusive_campaign_application_should_block_duplicate_until_cancellation_releases_scopes()
+    public async Task Changing_email_should_preserve_shared_old_email_scope_for_remaining_claim()
+    {
+        var campaign = await PublishedCampaignAsync(exclusivityGroup: Guid.NewGuid().ToString("N"), householdLimit: 2);
+        var first = await DraftWithEvidenceAsync(campaign.Id);
+        var second = await DraftWithEvidenceAsync(campaign.Id);
+        await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(first.Id));
+        await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(second.Id));
+        await WithUnitOfWorkAsync(() => _service.ClaimActionAsync(first.Id, new() { Action = "supplement", Reason = "Correct email" }));
+        first.Data.Email = first.Data.ConfirmEmail = "corrected@example.test";
+        first.Data.ChangeReason = "Correct applicant email";
+        await WithUnitOfWorkAsync(() => _service.SaveClaimAsync(first.Id, first.Data));
+        (await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(first.Id))).ReviewStatus.ShouldBe("Submitted");
+        await WithUnitOfWorkAsync(async () =>
+        {
+            var scopes = GetRequiredService<IRepository<RuleReservation, Guid>>();
+            (await scopes.CountAsync(x => x.ClaimId == first.Id)).ShouldBe(2);
+            (await scopes.GetListAsync(x => x.ClaimId == second.Id)).Single().ScopeKey.ShouldStartWith("exclusive-email:");
+        });
+        await WithUnitOfWorkAsync(() => _service.ClaimActionAsync(first.Id, new() { Action = "cancel", Reason = "Close corrected claim" }));
+        await WithUnitOfWorkAsync(async () =>
+        {
+            (await GetRequiredService<IRepository<RuleReservation, Guid>>().CountAsync(x => x.ClaimId == second.Id)).ShouldBe(2);
+        });
+    }
+
+    [Theory]
+    [InlineData(false)]
+    [InlineData(true)]
+    public async Task Exclusive_campaign_application_should_block_duplicate_until_cancellation_releases_scopes(bool normalizeGroup)
     {
         var group = Guid.NewGuid().ToString("N");
         var firstCampaign = await PublishedCampaignAsync(exclusivityGroup: group);
-        var secondCampaign = await PublishedCampaignAsync(exclusivityGroup: group);
+        var secondCampaign = await PublishedCampaignAsync(exclusivityGroup: normalizeGroup ? " " + group.ToUpperInvariant() + " " : group);
         var first = await DraftWithEvidenceAsync(firstCampaign.Id);
         var second = await DraftWithEvidenceAsync(secondCampaign.Id);
         await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(first.Id));

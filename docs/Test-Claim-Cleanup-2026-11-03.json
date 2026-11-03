@@ -1,0 +1,47 @@
+{
+  "verified_at": "2026-11-03T02:50:45.794Z",
+  "base_url": "https://cashback-uat-219894818230.asia-east1.run.app",
+  "source_commit": "120b566",
+  "local_tests_passed": 85,
+  "archived_count": 15,
+  "archived_claim_ids": [
+    "3a24b16e-329f-ffba-1231-5caf3ca2f05f",
+    "3a24b16e-3071-8986-8ac5-01bc87fe3d18",
+    "3a24b16e-2e7f-9569-81bc-26a638337355",
+    "3a24b16e-2c1e-3aa0-f668-e17481f8ee08",
+    "3a24b16c-86be-f4d8-c0cc-8ed10b27954a",
+    "3a24b16c-84c5-b319-1dae-baff4f6111ce",
+    "3a24b16c-82b8-cf87-53c6-aab0ad62e636",
+    "3a24b16c-80a4-b6a7-0f9a-070a14c12a31",
+    "3a24b16b-6fe9-1b9d-d953-4e51c8e16c97",
+    "3a24b16b-6dd2-11cf-1068-c2863385a2e1",
+    "3a24b16b-6b95-cba3-46c8-d4145a103a04",
+    "3a24b16b-66e9-a3e2-e540-baa8e42d44ae",
+    "3a24ad82-ba38-a36f-154f-86ec724d25d0",
+    "3a24ad5a-4608-932a-7be5-740a26e1ca97",
+    "3a24ad53-011c-b4fd-6fd6-2b807c640630"
+  ],
+  "admin_list_test_claim_count": 0,
+  "public_list_test_claim_count": 0,
+  "remaining_normal_claims": 11,
+  "normal_claim_states_preserved": true,
+  "retained_archive_audit_events": 15,
+  "physical_deletion": false,
+  "payments_created": false,
+  "new_test_claims_created": 0,
+  "passed": true,
+  "verified_at_taipei": "2026-11-03 10:50:46",
+  "build_id": "104ebe79-8691-4ad4-b570-9d5b2e04f79c",
+  "api_digest": "sha256:0f9b68aa4ee9dafc3f551b4b26d307c300992dbf76aa9e8eeeac785524c12c8d",
+  "revision": "cashback-uat-00023-buk",
+  "traffic": [
+    {
+      "percent": 100,
+      "revisionName": "cashback-uat-00023-buk"
+    }
+  ],
+  "post_promotion_access_checks_passed": 9,
+  "runtime_settings_preserved": true,
+  "verification_session_closed": true,
+  "rollback_revision": "cashback-uat-00021-nov"
+}

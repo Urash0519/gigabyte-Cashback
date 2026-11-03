@@ -10,7 +10,7 @@ Deployed and verified **2026-09-10**. Project `side-project-platform`, account `
 | Artifact Registry | `cashback-uat` | Regional Docker images: API, migrator and combined public/admin gateway. |
 | Cloud Build | On-demand builds | `cloudbuild.yaml`; source archive uses existing `side-project-platform_cloudbuild` bucket. |
 | IAM | `cashback-uat@side-project-platform.iam.gserviceaccount.com` | Dedicated runtime. Cloud SQL Client, bucket-scoped Object Admin and access to only runtime secrets. |
-| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance per revision, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00021-nov`, 100% traffic; Direct VPC egress routes outbound traffic through the reserved NAT IP. |
+| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance per revision, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00023-buk`, 100% traffic; Direct VPC egress routes outbound traffic through the reserved NAT IP. |
 | Cloud Run Job | `cashback-uat-migrator` | 1 task, 1 vCPU / 1GiB, 0 retries; successful P0 execution `cashback-uat-migrator-7bgwh`. |
 | Cloud Storage | `side-project-platform-cashback-uat-evidence` | Private ABP claim evidence; same region. Runtime Object Admin + Legacy Bucket Reader (ABP requires `storage.buckets.get` before uploading). |
 | Cloud Storage | `side-project-platform-cashback-uat-keys` | Private persistent ASP.NET Core Data Protection keys across instance restarts; runtime Object Admin. Persisted XML key verified. |
@@ -74,6 +74,14 @@ Q1 version 2 only shortens the simulated summary; original conditions remain in 
 Rollback: route traffic to a previously verified revision while investigating; the additive catalog table can remain. Do not drop the new table or run a down migration on the shared database as part of a UI rollback. Do not change bank-encryption secrets. Preserve the existing open-UAT access decision.
 
 ## Build and release
+
+### Remove completed synthetic claims from management lists — 2026-11-03
+
+Commit `120b566` adds an administrator-only `archive-test` action for closed, unpaid claims whose immutable campaign snapshot identifies them as integration fixtures. Archival uses existing soft-delete support, omits the claim from admin/owner lists and preserves its audit history. Claims with payments or outstanding serial/exclusivity reservations cannot be archived. Normal and active claims are protected. The AORUS and exclusivity verification scripts now archive their closed test claims automatically.
+
+All 85 backend tests passed, including five new archival/protection cases. Live cleanup archived exactly fifteen identified assistant-created claims: twelve exclusivity regression claims and three earlier AORUS integration claims. The normal UAT URL returns zero of those claims in both admin and owner lists, retains fifteen archive audit events, and preserves the other eleven claims' states and amounts. Cleanup created no new test claims or payments.
+
+Cloud Build `104ebe79-8691-4ad4-b570-9d5b2e04f79c` succeeded. API tag `uat-20261103-test-claim-archive`, digest `sha256:0f9b68aa4ee9dafc3f551b4b26d307c300992dbf76aa9e8eeeac785524c12c8d`. Revision **`cashback-uat-00023-buk`** serves 100% traffic; nine access/permission checks passed after rollout. Only the API image changed; the gateway, environment/secrets, volumes, service account, resources, scaling and fixed-egress settings were compared and preserved. No database migration was needed. Previous verified revision `cashback-uat-00021-nov` remains the rollback target; the temporary tag was removed. See [cleanup and deployment evidence](../../../docs/Test-Claim-Cleanup-2026-11-03.json).
 
 ### Same-campaign exclusivity correction — 2026-11-03
 

@@ -12,7 +12,7 @@ const checks = [];
 const stamp = Date.now();
 const report = { started_at: new Date().toISOString(), base_url: base, checks };
 
-async function request(path, body, status = 200) {
+async function request(path, body, status = 200, attempt = 0) {
   const headers = { 'X-Requested-With': 'XMLHttpRequest', Cookie: [...cookies].map(([k, v]) => `${k}=${v}`).join('; ') };
   if (cookies.has('XSRF-TOKEN')) headers.RequestVerificationToken = decodeURIComponent(cookies.get('XSRF-TOKEN'));
   if (body !== undefined) headers['Content-Type'] = 'application/json';
@@ -26,6 +26,14 @@ async function request(path, body, status = 200) {
     cookies.set(pair.slice(0, at), pair.slice(at + 1));
   }
   const raw = await response.text();
+  // The external test provider can time out; never retry a business-rule rejection.
+  if (path.endsWith('/submit') && response.status === 403 && attempt < 2 &&
+      JSON.parse(raw)?.error?.message === 'AORUS membership verification is temporarily unavailable. Please try again later.') {
+    report.aorus_transient_retries = (report.aorus_transient_retries ?? 0) + 1;
+    console.log(`RETRY transient AORUS unavailability (${attempt + 1}/2)`);
+    await new Promise(resolve => setTimeout(resolve, 1000));
+    return request(path, body, status, attempt + 1);
+  }
   assert.equal(response.status, status, `${path}: HTTP ${response.status} ${raw.slice(0, 500)}`);
   return raw ? JSON.parse(raw) : null;
 }

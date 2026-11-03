@@ -10,7 +10,7 @@ Deployed and verified **2026-09-10**. Project `side-project-platform`, account `
 | Artifact Registry | `cashback-uat` | Regional Docker images: API, migrator and combined public/admin gateway. |
 | Cloud Build | On-demand builds | `cloudbuild.yaml`; source archive uses existing `side-project-platform_cloudbuild` bucket. |
 | IAM | `cashback-uat@side-project-platform.iam.gserviceaccount.com` | Dedicated runtime. Cloud SQL Client, bucket-scoped Object Admin and access to only runtime secrets. |
-| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance per revision, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00019-bim`, 100% traffic; Direct VPC egress routes outbound traffic through the reserved NAT IP. |
+| Cloud Run | `cashback-uat` | One service, gateway + API containers; minimum 0, maximum 1 instance per revision, concurrency 10; 2 vCPU / 1.25GiB total while requests run. Revision `cashback-uat-00021-nov`, 100% traffic; Direct VPC egress routes outbound traffic through the reserved NAT IP. |
 | Cloud Run Job | `cashback-uat-migrator` | 1 task, 1 vCPU / 1GiB, 0 retries; successful P0 execution `cashback-uat-migrator-7bgwh`. |
 | Cloud Storage | `side-project-platform-cashback-uat-evidence` | Private ABP claim evidence; same region. Runtime Object Admin + Legacy Bucket Reader (ABP requires `storage.buckets.get` before uploading). |
 | Cloud Storage | `side-project-platform-cashback-uat-keys` | Private persistent ASP.NET Core Data Protection keys across instance restarts; runtime Object Admin. Persisted XML key verified. |
@@ -74,6 +74,16 @@ Q1 version 2 only shortens the simulated summary; original conditions remain in 
 Rollback: route traffic to a previously verified revision while investigating; the additive catalog table can remain. Do not drop the new table or run a down migration on the shared database as part of a UI rollback. Do not change bank-encryption secrets. Preserve the existing open-UAT access decision.
 
 ## Build and release
+
+### Same-campaign exclusivity correction — 2026-11-03
+
+Commit `2a8e0b4` fixes a second claim in the same campaign incorrectly being blocked by its first claim's group/owner or group/email reservation. Same-campaign claims share those unique scopes while person/household limits still apply. Cancelling, rejecting or correcting an email transfers each reservation to a remaining matching claim before releasing it. Cross-campaign exclusivity remains enforced. No schema migration or existing-record cleanup is required.
+
+Cloud Build `31ef58df-7a73-4d38-b80b-a582182ab9e4` succeeded. API tag `uat-20261103-exclusive-group`, digest `sha256:59e9e3aaa79bb89cf7e82df5a5b71d1697b474641b480fefc4ef9d2577201e3d`. Revision **`cashback-uat-00021-nov`** serves 100% traffic. Only the API image changed; the gateway, secrets, service account, volumes, resources, fixed egress and min 0 / max 1 settings were compared with the previous service specification and preserved. Previous verified revision `cashback-uat-00019-bim` remains the rollback target. The temporary traffic tag was removed.
+
+Validation: all 80 backend tests passed, followed by eight staged HTTP business-flow checks, nine post-promotion access/permission checks and five read-only data checks on the normal UAT URL. Two earlier staged attempts encountered temporary AORUS unavailability; both cleaned up. The final complete business-flow run passed without retries. All six synthetic campaigns from those attempts are archived, all twelve test claims are closed, and their reserved/approved/paid amounts are zero. The user's Q1 draft and existing submitted claim retain their prior statuses; neither was submitted or cancelled by verification. No payment was created.
+
+See [fix and regression details](../../../docs/Exclusive-Campaign-Fix.md), [live business-flow evidence](../../../docs/Exclusive-Campaign-Regression-2026-11-03.json) and [deployment evidence](../../../docs/Exclusive-Campaign-Deployment-2026-11-03.json). API-only builds use `cloudbuild-api.yaml`; live regression is reproducible with `scripts/verify-exclusivity-uat.mjs`.
 
 ### Immediate frontend email membership check — 2026-11-02
 

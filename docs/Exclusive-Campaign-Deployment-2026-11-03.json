@@ -1,0 +1,29 @@
+{
+  "verified_at": "2026-11-03T02:36:41.720Z",
+  "verified_at_taipei": "2026-11-03 10:36:41",
+  "base_url": "https://cashback-uat-219894818230.asia-east1.run.app",
+  "source_commit": "2a8e0b4",
+  "build_id": "31ef58df-7a73-4d38-b80b-a582182ab9e4",
+  "api_digest": "sha256:59e9e3aaa79bb89cf7e82df5a5b71d1697b474641b480fefc4ef9d2577201e3d",
+  "revision": "cashback-uat-00021-nov",
+  "traffic": [
+    {
+      "percent": 100,
+      "revisionName": "cashback-uat-00021-nov"
+    }
+  ],
+  "local_tests_passed": 80,
+  "staged_business_checks_passed": 8,
+  "post_promotion_access_checks_passed": 9,
+  "configuration_comparison": "Only the API image changed; container configuration, gateway, secrets, scaling and fixed-egress settings preserved",
+  "existing_q1_draft_status": "Draft",
+  "existing_q1_submitted_claim_status": "Submitted",
+  "synthetic_campaigns_archived": 6,
+  "synthetic_claims_closed": 12,
+  "payment_created": false,
+  "initial_live_attempts": "Two attempts encountered transient AORUS unavailability and cleaned up successfully; final complete run passed without retries",
+  "rollback_revision": "cashback-uat-00019-bim",
+  "passed": true,
+  "post_promotion_data_checks_passed": 5,
+  "verification_session_closed": true
+}

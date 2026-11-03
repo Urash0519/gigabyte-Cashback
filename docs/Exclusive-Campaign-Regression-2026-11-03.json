@@ -1,0 +1,28 @@
+{
+  "started_at": "2026-11-03T02:33:40.547Z",
+  "base_url": "https://exclusive-20261103---cashback-uat-rt4ls6lrna-de.a.run.app",
+  "checks": [
+    "Synthetic campaigns stay hidden from public discovery",
+    "Two same-campaign claims submit with shared owner/email and separate serials",
+    "Per-person limit still blocks the third claim without reserving budget",
+    "Another campaign with an equivalent normalized group stays blocked",
+    "Supplement resubmission shares scopes and does not double-reserve budget",
+    "Cancelling the original scope owner keeps the remaining claim exclusive",
+    "Closing the last claim releases the group for another campaign",
+    "All synthetic claims closed, budgets released, campaigns archived; no payments created"
+  ],
+  "passed": true,
+  "cleanup_complete": true,
+  "campaign_ids": [
+    "3a24b16e-2a30-af13-5a78-c121199d02ab",
+    "3a24b16e-2ad9-1bfb-7867-8c0c1b61261d"
+  ],
+  "claim_ids": [
+    "3a24b16e-2c1e-3aa0-f668-e17481f8ee08",
+    "3a24b16e-2e7f-9569-81bc-26a638337355",
+    "3a24b16e-3071-8986-8ac5-01bc87fe3d18",
+    "3a24b16e-329f-ffba-1231-5caf3ca2f05f"
+  ],
+  "completed_at": "2026-11-03T02:33:59.545Z",
+  "payment_created": false
+}

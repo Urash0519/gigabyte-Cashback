@@ -1,6 +1,7 @@
 import { useLocale } from "./i18n";
 import { useEffect, useState } from "react";
 import { Revisions } from "./Revisions";
+import { AorusMemberReference } from "./AorusMemberReference";
 import {
   api,
   type Campaign,
@@ -186,10 +187,10 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
         </Panel>
       ) : (
         <>
-          <div className="metrics">
+          <div className="metrics claim-metrics">
             <div className="metric">
               <span>{t("Claim reference")}</span>
-              <strong style={{ fontSize: "1.15rem" }}>{c.reference}</strong>
+              <strong className="claim-reference">{c.reference}</strong>
             </div>
             <div className="metric">
               <span>{t("Review")}</span>
@@ -209,7 +210,7 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
               <strong>{money(c.amountMinor, c.currency)}</strong>
             </div>
           </div>
-          <div className="split">
+          <div className="split claim-review">
             <div>
               <Panel title={t("Applicant and purchase")}>
                 <dl className="details">
@@ -253,6 +254,7 @@ export function Claims({ claims, campaigns, run, reload, busy }: Props) {
                     </div>
                   ))}
                 </dl>
+                <AorusMemberReference key={`${c.id}:${c.data.email}`} claimId={c.id} />
               </Panel>
               <Panel title={t("Products")}>
                 <div className="table-wrap">

@@ -138,6 +138,53 @@ public class OperationsAppServiceTests : CashbackEntityFrameworkCoreTestBase
         (await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync(true))).Single(x => x.Id == campaign.Id).ReservedMinor.ShouldBe(0);
     }
 
+    [Theory]
+    [InlineData(true, "AORUS returned name")]
+    [InlineData(false, null)]
+    public async Task Reviewer_member_reference_should_use_saved_email_without_changing_claim(bool isMember, string? name)
+    {
+        var campaign = await PublishedCampaignAsync();
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        var submitted = await WithUnitOfWorkAsync(() => _service.SubmitClaimAsync(draft.Id));
+        var members = GetRequiredService<IAorusMemberClient>();
+        members.LookupAsync(submitted.Data.Email, Arg.Any<CancellationToken>()).Returns(new AorusMemberLookup(isMember, name));
+        var reference = await WithUnitOfWorkAsync(() => _service.GetAorusMemberReferenceAsync(draft.Id));
+        reference.Email.ShouldBe(submitted.Data.Email);
+        reference.IsMember.ShouldBe(isMember); reference.Name.ShouldBe(name); reference.CheckedAt.ShouldNotBeNull();
+        reference.CheckedAt!.Value.Kind.ShouldBe(DateTimeKind.Utc);
+        await members.Received(1).LookupAsync(submitted.Data.Email, Arg.Any<CancellationToken>());
+        var after = (await WithUnitOfWorkAsync(() => _service.GetClaimsAsync())).Single(x => x.Id == draft.Id);
+        after.ReviewStatus.ShouldBe("Submitted"); after.History.Count.ShouldBe(submitted.History.Count);
+        after.Data.Email.ShouldBe(submitted.Data.Email);
+        (await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync(true))).Single(x => x.Id == campaign.Id).ReservedMinor.ShouldBe(1000);
+    }
+
+    [Fact]
+    public async Task Reviewer_member_reference_should_be_unverified_without_network_when_disabled()
+    {
+        var campaign = await PublishedCampaignAsync();
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        var members = GetRequiredService<IAorusMemberClient>();
+        members.IsEnabled.Returns(false);
+        var reference = await WithUnitOfWorkAsync(() => _service.GetAorusMemberReferenceAsync(draft.Id));
+        reference.IsMember.ShouldBeNull(); reference.Name.ShouldBeNull(); reference.CheckedAt.ShouldBeNull();
+        await members.DidNotReceive().LookupAsync(Arg.Any<string>(), Arg.Any<CancellationToken>());
+    }
+
+    [Fact]
+    public async Task Reviewer_member_reference_failure_should_not_change_claim_or_review_history()
+    {
+        var campaign = await PublishedCampaignAsync();
+        var draft = await DraftWithEvidenceAsync(campaign.Id);
+        var before = (await WithUnitOfWorkAsync(() => _service.GetClaimsAsync())).Single(x => x.Id == draft.Id);
+        GetRequiredService<IAorusMemberClient>().LookupAsync(Arg.Any<string>(), Arg.Any<CancellationToken>())
+            .Returns(Task.FromException<AorusMemberLookup>(new UserFriendlyException("AORUS temporarily unavailable")));
+        await Should.ThrowAsync<UserFriendlyException>(() => WithUnitOfWorkAsync(() => _service.GetAorusMemberReferenceAsync(draft.Id)));
+        var after = (await WithUnitOfWorkAsync(() => _service.GetClaimsAsync())).Single(x => x.Id == draft.Id);
+        after.ReviewStatus.ShouldBe("Draft"); after.History.Count.ShouldBe(before.History.Count);
+        (await WithUnitOfWorkAsync(() => _service.GetCampaignsAsync(true))).Single(x => x.Id == campaign.Id).ReservedMinor.ShouldBe(0);
+    }
+
     [Fact]
     public async Task Early_email_lookup_should_not_claim_a_real_match_in_local_mock_mode()
     {

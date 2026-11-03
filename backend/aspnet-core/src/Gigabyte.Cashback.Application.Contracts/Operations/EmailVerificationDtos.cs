@@ -19,7 +19,16 @@ public sealed class EmailVerificationDto
     public bool? IsMember { get; set; }
 }
 
+public sealed class AorusMemberReferenceDto
+{
+    public string Email { get; set; } = "";
+    public bool? IsMember { get; set; }
+    public string? Name { get; set; }
+    public DateTime? CheckedAt { get; set; }
+}
+
 public partial interface IOperationsAppService
 {
     Task<EmailVerificationDto> VerifyClaimEmailAsync(Guid id, EmailVerificationInput input);
+    Task<AorusMemberReferenceDto> GetAorusMemberReferenceAsync(Guid id);
 }

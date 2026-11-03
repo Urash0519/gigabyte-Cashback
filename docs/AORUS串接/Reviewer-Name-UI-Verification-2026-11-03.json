@@ -1,0 +1,20 @@
+{
+  "passed": true,
+  "checks": [
+    "Original review 1920px: long reference/name stay inside cards, no page overflow or automatic review checks",
+    "Original review 1440px: long reference/name stay inside cards, no page overflow or automatic review checks",
+    "Original review 768px: long reference/name stay inside cards, no page overflow or automatic review checks",
+    "Original review 375px: long reference/name stay inside cards, no page overflow or automatic review checks",
+    "Reference review 1920px: long reference/name stay inside cards, no page overflow or automatic review checks",
+    "Reference review 1440px: long reference/name stay inside cards, no page overflow or automatic review checks",
+    "Reference review 768px: long reference/name stay inside cards, no page overflow or automatic review checks",
+    "Reference review 375px: long reference/name stay inside cards, no page overflow or automatic review checks",
+    "missing: missing/unverified information is shown clearly without an old name",
+    "disabled: missing/unverified information is shown clearly without an old name",
+    "nameless: missing/unverified information is shown clearly without an old name",
+    "Provider error supports retry; Chinese labels preserve the returned name without another lookup",
+    "Switching claims aborts/ignores the previous lookup and prevents stale member names"
+  ],
+  "console_errors": [],
+  "uat_claims_created": 0
+}

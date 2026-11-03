@@ -280,6 +280,7 @@ const post = <T>(path: string, data: unknown = {}) =>
     body: JSON.stringify(data),
   });
 export type EmailVerificationResult = { email: string; isMember: boolean | null };
+export type AorusMemberReference = { email: string; isMember: boolean | null; name: string | null; checkedAt: string | null };
 export const api = {
   session: () => apiRequest<Session>("/api/dev-auth/session"),
   login: async (area: "public" | "admin") => {
@@ -319,6 +320,11 @@ export const api = {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ email }),
+      signal,
+    }),
+  aorusMemberReference: (id: string, signal?: AbortSignal) =>
+    apiRequest<AorusMemberReference>(`/api/operations/claims/${id}/aorus-member`, {
+      method: "POST",
       signal,
     }),
   submitClaim: (id: string) =>

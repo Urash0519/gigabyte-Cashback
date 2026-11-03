@@ -12,6 +12,32 @@ The spaces surrounding `eu_promotion` in the PDF are incorrect. A controlled com
 
 Tokens are cached per backend process and refreshed on demand before expiry. HTTP 401 or business code 2098 (`StatusCode` or string `Status_code`) triggers one replacement and one lookup retry. Concurrent requests share token acquisition. No periodic job or minimum running instance is required.
 
+## AORUS test member emails
+
+`test@gmail.com` is the account supplied in the API document and remains the default for automated checks. Its membership lookup passed the GCP verification on 2026-11-02.
+
+The following additional test emails were supplied by AORUS and relayed by the user on **2026-11-03**. They are available for manual and integration testing; this supplied list has not yet been individually verified by this change.
+
+| Test email | Source / status |
+|---|---|
+| vincent.chu@gigabyte.com | AORUS-provided; awaiting individual verification |
+| peter.nien@gigabyte.com | AORUS-provided; awaiting individual verification |
+| yang71030@gmail.com | AORUS-provided; awaiting individual verification |
+| yang71030@yahoo.com | AORUS-provided; awaiting individual verification |
+| lyana.lee.gigabyte@gmail.com | AORUS-provided; awaiting individual verification |
+| cl4rmp404@gmail.com | AORUS-provided; awaiting individual verification |
+| lyanalee1210@gmail.com | AORUS-provided; awaiting individual verification |
+| ryan.lin@gigabyte.com | AORUS-provided; awaiting individual verification |
+| cl4rmp903@gmail.com | AORUS-provided; awaiting individual verification |
+
+Set `AORUS_TEST_EMAIL` to select a different account when running the live verification scripts. Record the date and outcome here when an individual address is checked. A successful membership lookup is reference data; it does not verify ownership of the mailbox.
+
+## Reviewer member reference
+
+Administrators with claim-review permission can call `POST /api/operations/claims/{claimId}/aorus-member`. The server uses the claim's saved email and returns only `email`, nullable `isMember`, the provider's exact `Result.Name` string (or null), and `checkedAt`. The request has no editable email input and sends `Cache-Control: no-store`. It is not available to applicants and does not change the claim, budget or required review checks. Existing submitted claims can use it without re-submission or migration.
+
+The Claims detail view displays the AORUS name and membership status separately from the applicant's own name, along with the queried email and time. It shows loading, missing-member, missing-name, disabled and retryable-error states. Provider names are displayed as returned, without decoding or treating them as evidence of a name match. Switching cases aborts the previous lookup and clears its result. Names and provider identifiers are not added to the applicant email-verification response.
+
 ## Early frontend check
 
 An authenticated applicant can check an unsaved email for their own editable claim:

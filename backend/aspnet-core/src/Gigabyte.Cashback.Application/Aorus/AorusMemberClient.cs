@@ -18,8 +18,11 @@ public sealed class AorusMemberClient(
     public bool IsEnabled => options.Value.Enabled;
 
     public async Task<bool> ExistsAsync(string email, CancellationToken cancellationToken = default)
+        => !IsEnabled || (await LookupAsync(email, cancellationToken)).IsMember == true;
+
+    public async Task<AorusMemberLookup> LookupAsync(string email, CancellationToken cancellationToken = default)
     {
-        if (!options.Value.Enabled) return true;
+        if (!IsEnabled) return new(null);
         try
         {
             var token = await tokens.GetAsync(cancellationToken: cancellationToken);
@@ -51,12 +54,16 @@ public sealed class AorusMemberClient(
                 }
                 if (code == 2002 && root.TryGetProperty("Status", out var failed) && failed.GetString() == "Failed" &&
                     root.TryGetProperty("Result", out var missing) && missing.ValueKind == JsonValueKind.Null)
-                    return false;
+                    return new(false);
                 if (code == 1000 && root.TryGetProperty("Status", out var status) && status.GetString() == "Success" &&
                     root.TryGetProperty("Result", out var result) && result.ValueKind == JsonValueKind.Object &&
                     result.TryGetProperty("Email", out var returnedEmail) && returnedEmail.ValueKind == JsonValueKind.String &&
                     string.Equals(returnedEmail.GetString(), email, StringComparison.OrdinalIgnoreCase))
-                    return true;
+                {
+                    var name = result.TryGetProperty("Name", out var returnedName) && returnedName.ValueKind == JsonValueKind.String
+                        ? returnedName.GetString() : null;
+                    return new(true, name);
+                }
                 logger.LogWarning("AORUS member lookup returned unexpected business code {StatusCode}.", code);
                 throw AorusTokenProvider.Unavailable();
             }

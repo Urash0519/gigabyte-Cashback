@@ -90,6 +90,20 @@ public class AorusMemberClientTests
         tokenCalls.ShouldBe(1); memberCalls.ShouldBe(2);
     }
 
+    [Theory]
+    [InlineData("\"王小明\"", "王小明")]
+    [InlineData("\"b3BhcXVlLW5hbWU=\"", "b3BhcXVlLW5hbWU=")]
+    [InlineData("null", null)]
+    [InlineData("123", null)]
+    public async Task Member_reference_should_preserve_returned_name_without_reinterpreting_it(string jsonName, string? expectedName)
+    {
+        var response = Found.Replace("\"Name\":\"opaque\"", "\"Name\":" + jsonName);
+        using var fixture = new Fixture((request, _) => Task.FromResult(request.RequestUri!.AbsolutePath == "/oauth/request" ? Token() : Json(response)));
+        var result = await fixture.Members.LookupAsync(Email);
+        result.IsMember.ShouldBe(true);
+        result.Name.ShouldBe(expectedName);
+    }
+
     [Fact]
     public async Task Expiring_token_should_refresh_once_for_concurrent_requests()
     {
@@ -160,6 +174,8 @@ public class AorusMemberClientTests
         var tokenCalls = 0;
         using var fixture = new Fixture((request, _) => Task.FromResult(request.RequestUri!.AbsolutePath == "/oauth/request" ? Token("token-" + ++tokenCalls) : Json(Missing)));
         (await fixture.Members.ExistsAsync(Email)).ShouldBeFalse();
+        var reference = await fixture.Members.LookupAsync(Email);
+        reference.IsMember.ShouldBe(false); reference.Name.ShouldBeNull();
         tokenCalls.ShouldBe(1);
     }
 
@@ -213,5 +229,7 @@ public class AorusMemberClientTests
     {
         using var fixture = new Fixture((_, _) => throw new Exception("Network must not be used"), enabled: false);
         (await fixture.Members.ExistsAsync(Email)).ShouldBeTrue();
+        var reference = await fixture.Members.LookupAsync(Email);
+        reference.IsMember.ShouldBeNull(); reference.Name.ShouldBeNull();
     }
 }
